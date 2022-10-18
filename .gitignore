@@ -1,0 +1,3 @@
+dist/
+conf/deployment-sample.yaml
+.venv/
