@@ -1,0 +1,13 @@
+[project]
+name = "emr-cli"
+version = "0.0.1"
+dependencies = [
+    "click==7.1.2",
+    "boto3~=1.26.6"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.scripts]
+emr = "emr_cli.emr_cli:cli"
