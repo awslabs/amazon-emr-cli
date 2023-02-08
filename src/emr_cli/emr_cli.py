@@ -1,17 +1,25 @@
 import click
+
+from emr_cli.packaging.detector import ProjectDetector
 from .deployments.emr_serverless import EMRServerless
 from .packaging.python_project import PythonProject
 
 
 @click.group()
-def cli():
-    pass
+@click.pass_context
+def cli(ctx):
+    ctx.obj = ProjectDetector().detect()
 
 
 @click.command()
-def init():
-    click.echo("Initializing project")
-    PythonProject().initialize()
+@click.option("--dockerfile", default=False, is_flag=True, help="Only create a sample Dockerfile for packaging Python dependencies")
+def init(dockerfile):
+    if dockerfile:
+        click.echo("Creating sample Dockerfile...")
+        PythonProject().copy_single_file('Dockerfile')
+    else:
+        click.echo("Initializing project")
+        PythonProject().initialize()
 
 
 @click.command()
@@ -21,8 +29,9 @@ def init():
     help="Entrypoint file",
     required=True,
 )
-def package(entry_point):
-    p = PythonProject(entry_point)
+@click.pass_obj
+def package(project, entry_point):
+    p = project(entry_point)
     p.build()
 
 
@@ -33,9 +42,10 @@ def package(entry_point):
     help="PySpark file to deploy",
 )
 @click.option("--s3-code-uri", help="Where to copy code artifacts to")
-def deploy(entry_point, s3_code_uri):
+@click.pass_obj
+def deploy(project, entry_point, s3_code_uri):
     # Copy the source to S3
-    p = PythonProject(entry_point)
+    p = project(entry_point)
     p.deploy(s3_code_uri)
 
 
@@ -57,16 +67,19 @@ def deploy(entry_point, s3_code_uri):
     default=False,
     is_flag=True,
 )
+@click.pass_obj
 def run(
+    project, 
     application_id, entry_point, job_role, wait, s3_code_uri, job_name, job_args, build
 ):
+    # We require entry-point and s3-code-uri
+    if entry_point is None or s3_code_uri is None:
+        raise click.BadArgumentUsage(
+            "--entry-point and --s3-code-uri are required if --build is used."
+        )
+    p = project(entry_point, s3_code_uri)
+
     if build:
-        # We require entry-point and s3-code-uri
-        if entry_point is None or s3_code_uri is None:
-            raise click.BadArgumentUsage(
-                "--entry-point and --s3-code-uri are required if --build is used."
-            )
-        p = PythonProject(entry_point)
         p.build()
         p.deploy(s3_code_uri)
 
@@ -79,7 +92,7 @@ def run(
 
         if job_args:
             job_args = job_args.split(",")
-        emrs = EMRServerless(application_id, s3_code_uri, entry_point, job_role)
+        emrs = EMRServerless(application_id, job_role, p)
         emrs.run_job(job_name, job_args, wait)
 
 

@@ -1,25 +1,50 @@
+import abc
 import os
 import sys
 from time import sleep
-from typing import List
+from typing import List, Optional
+
 import boto3
 
 from emr_cli.utils import console_log
+
+
+class DeploymentPackage(metaclass=abc.ABCMeta):
+    def __init__(
+        self, entry_point_path: str = "entrypoint.py", s3_target_uri: str = ""
+    ) -> None:
+        self.entry_point_path = entry_point_path
+        self.dist_dir = "dist"
+
+        # We don't populate this until we actually deploy
+        self.s3_uri_base = s3_target_uri
+
+    def spark_submit_parameters(self) -> str:
+        """
+        Returns any additional arguments necessary for spark-submit
+        """
+        return ""
+
+    def entrypoint_uri(self) -> str:
+        """
+        Returns the full S3 URI to the entrypoint file, e.g. s3://bucket/path/somecode.py
+        """
+        if self.s3_uri_base is None:
+            raise Exception("S3 URI has not been set, aborting")
+        return os.path.join(self.s3_uri_base, self.entry_point_path)
 
 
 class EMRServerless:
     def __init__(
         self,
         application_id: str,
-        s3_artifacts_uri: str,
-        entry_point: str,
         job_role: str,
-        region: str = None,
+        deployment_package: DeploymentPackage,
+        region: str = "",
     ) -> None:
         self.application_id = application_id
-        self.entry_point = os.path.basename(entry_point)
-        self.s3_artifacts_uri = s3_artifacts_uri
         self.job_role = job_role
+        self.dp = deployment_package
         if region:
             self.client = boto3.client("emr-serverless", region_name=region)
         else:
@@ -27,15 +52,15 @@ class EMRServerless:
             # We may want to add an extra check here for the latter.
             self.client = boto3.client("emr-serverless")
 
-    def run_job(self, job_name: str, job_args: List[str] = None, wait: bool = True):
-        s3_entrypoint_uri = os.path.join(self.s3_artifacts_uri, self.entry_point)
-        s3_archives_uri = os.path.join(self.s3_artifacts_uri, "pyspark_deps.tar.gz")
+    def run_job(self, job_name: str, job_args: Optional[List[str]] = None, wait: bool = True):
         jobDriver = {
             "sparkSubmit": {
-                "entryPoint": s3_entrypoint_uri,
-                "sparkSubmitParameters": f"--conf spark.archives={s3_archives_uri}#environment --conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=./environment/bin/python --conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python",
+                "entryPoint": self.dp.entrypoint_uri(),
             }
         }
+        if len(self.dp.spark_submit_parameters()) > 0:
+            jobDriver['sparkSubmit']["sparkSubmitParameters"] = self.dp.spark_submit_parameters()
+
         if job_args:
             jobDriver["sparkSubmit"]["entryPointArguments"] = job_args
 
@@ -44,13 +69,13 @@ class EMRServerless:
             executionRoleArn=self.job_role,
             name=job_name,
             jobDriver=jobDriver,
-            # configurationOverrides={
-            #     "monitoringConfiguration": {
-            #         "s3MonitoringConfiguration": {
-            #             "logUri": f"s3://{s3_bucket_name}/{self.s3_log_prefix}"
-            #         }
-            #     }
-            # },
+            configurationOverrides={
+                "monitoringConfiguration": {
+                    "s3MonitoringConfiguration": {
+                        "logUri": f"s3://dacort-demo-code/logs/"
+                    }
+                }
+            },
         )
         job_run_id = response.get("jobRunId")
 
@@ -60,6 +85,7 @@ class EMRServerless:
 
         job_done = False
         job_state = "SUBMITTED"
+        jr_response = {}
         while wait and not job_done:
             jr_response = self.get_job_run(job_run_id)
             new_state = jr_response.get("state")
