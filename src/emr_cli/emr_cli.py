@@ -1,6 +1,7 @@
 import click
 
 from emr_cli.packaging.detector import ProjectDetector
+
 from .deployments.emr_serverless import EMRServerless
 from .packaging.python_project import PythonProject
 
@@ -12,11 +13,16 @@ def cli(ctx):
 
 
 @click.command()
-@click.option("--dockerfile", default=False, is_flag=True, help="Only create a sample Dockerfile for packaging Python dependencies")
+@click.option(
+    "--dockerfile",
+    default=False,
+    is_flag=True,
+    help="Only create a sample Dockerfile for packaging Python dependencies",
+)
 def init(dockerfile):
     if dockerfile:
         click.echo("Creating sample Dockerfile...")
-        PythonProject().copy_single_file('Dockerfile')
+        PythonProject().copy_single_file("Dockerfile")
     else:
         click.echo("Initializing project")
         PythonProject().initialize()
@@ -51,7 +57,11 @@ def deploy(project, entry_point, s3_code_uri):
 
 @click.command()
 @click.option("--application-id", help="EMR Serverless Application ID", required=True)
-@click.option("--entry-point", help="Python or Jar file for the main entrypoint")
+@click.option(
+    "--entry-point",
+    type=click.Path(exists=True, dir_okay=False, allow_dash=False),
+    help="Python or Jar file for the main entrypoint",
+)
 @click.option("--job-role", help="IAM Role ARN to use for the job execution")
 @click.option("--wait", default=False, is_flag=True, help="Wait for job to finish")
 @click.option("--s3-code-uri", help="Where to copy code artifacts to")
@@ -62,6 +72,11 @@ def deploy(project, entry_point, s3_code_uri):
     default=None,
 )
 @click.option(
+    "--spark-submit-opts",
+    help="String of spark-submit options",
+    default=None,
+)
+@click.option(
     "--build",
     help="Do not package and deploy the job assets",
     default=False,
@@ -69,8 +84,16 @@ def deploy(project, entry_point, s3_code_uri):
 )
 @click.pass_obj
 def run(
-    project, 
-    application_id, entry_point, job_role, wait, s3_code_uri, job_name, job_args, build
+    project,
+    application_id,
+    entry_point,
+    job_role,
+    wait,
+    s3_code_uri,
+    job_name,
+    job_args,
+    spark_submit_opts,
+    build,
 ):
     # We require entry-point and s3-code-uri
     if entry_point is None or s3_code_uri is None:
@@ -93,7 +116,7 @@ def run(
         if job_args:
             job_args = job_args.split(",")
         emrs = EMRServerless(application_id, job_role, p)
-        emrs.run_job(job_name, job_args, wait)
+        emrs.run_job(job_name, job_args, spark_submit_opts, wait)
 
 
 cli.add_command(package)

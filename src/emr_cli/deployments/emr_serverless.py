@@ -16,7 +16,7 @@ class DeploymentPackage(metaclass=abc.ABCMeta):
         self.entry_point_path = entry_point_path
         self.dist_dir = "dist"
 
-        # We don't populate this until we actually deploy
+        # We might not populate this until we actually deploy
         self.s3_uri_base = s3_target_uri
 
     def spark_submit_parameters(self) -> str:
@@ -52,36 +52,50 @@ class EMRServerless:
             # We may want to add an extra check here for the latter.
             self.client = boto3.client("emr-serverless")
 
-    def run_job(self, job_name: str, job_args: Optional[List[str]] = None, wait: bool = True):
+    def run_job(
+        self,
+        job_name: str,
+        job_args: Optional[List[str]] = None,
+        spark_submit_opts: Optional[str] = None,
+        wait: bool = True,
+    ):
         jobDriver = {
             "sparkSubmit": {
                 "entryPoint": self.dp.entrypoint_uri(),
             }
         }
+        spark_submit_parameters = ""
+
         if len(self.dp.spark_submit_parameters()) > 0:
-            jobDriver['sparkSubmit']["sparkSubmitParameters"] = self.dp.spark_submit_parameters()
+            spark_submit_parameters = self.dp.spark_submit_parameters().strip()
+
+        if spark_submit_opts:
+            spark_submit_parameters += f" {spark_submit_opts}".strip()
+
+        if spark_submit_parameters:
+            jobDriver["sparkSubmit"]["sparkSubmitParameters"] = spark_submit_parameters
 
         if job_args:
-            jobDriver["sparkSubmit"]["entryPointArguments"] = job_args
+            jobDriver["sparkSubmit"]["entryPointArguments"] = job_args  # type: ignore
 
         response = self.client.start_job_run(
             applicationId=self.application_id,
             executionRoleArn=self.job_role,
             name=job_name,
             jobDriver=jobDriver,
-            configurationOverrides={
-                "monitoringConfiguration": {
-                    "s3MonitoringConfiguration": {
-                        "logUri": f"s3://dacort-demo-code/logs/"
-                    }
-                }
-            },
+            # configurationOverrides={
+            #     "monitoringConfiguration": {
+            #         "s3MonitoringConfiguration": {
+            #             "logUri": "s3://<BUCKET>/logs/"
+            #         }
+            #     }
+            # },
         )
         job_run_id = response.get("jobRunId")
 
         console_log(f"Job submitted to EMR Serverless (Job Run ID: {job_run_id})")
         if wait:
-            console_log(f"Waiting for job to complete...")
+            console_log("Waiting for job to complete...")
 
         job_done = False
         job_state = "SUBMITTED"
@@ -106,7 +120,7 @@ class EMRServerless:
                     f"EMR Serverless job failed: {jr_response.get('stateDetails')}"
                 )
                 sys.exit(1)
-            console_log(f"Job completed successfully!")
+            console_log("Job completed successfully!")
 
         return job_run_id
 
