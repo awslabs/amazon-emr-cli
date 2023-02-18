@@ -1,12 +1,58 @@
 # EMR CLI
 
-So we're all working on data pipelines every day, but wouldn't be nice to just hit a button and have our code automatically deployed to production or test accounts I thought so, too, thats why I created the EMR CLI (`emr`) that can help you package and deploy your EMR jobs so you don't have to.
+So we're all working on data pipelines every day, but wouldn't be nice to just hit a button and have our code automatically deployed to staging or test accounts? I thought so, too, thats why I created the EMR CLI (`emr`) that can help you package and deploy your EMR jobs so you don't have to.
 
 The EMR CLI supports a wide variety of configuration options to adapt to _your_ data pipeline, not the other way around.
 
 1. Packaging - Ensure a consistent approach to packaging your production Spark jobs.
 2. Deployment - Easily deploy your Spark jobs across multiple EMR environments or deployment frameworks like EC2, EKS, and Serverless.
 3. CI/CD - Easily test each iteration of your code without resorting to messy shell scripts. :)
+
+## Quick Start
+
+You can use the EMR CLI to take a project from nothing to running in EMR Serverless is 2 steps.
+
+> **Note** This tutorial assumes you have already [setup EMR Serverless](https://docs.aws.amazon.com/emr/latest/EMR-Serverless-UserGuide/setting-up.html) and have an EMR Serverless application, job role, and S3 bucket you can use.
+
+1. Create a sample project
+
+```bash
+emr init scratch
+```
+
+You should now have a sample PySpark project in your scratch directory.
+
+```
+scratch
+├── Dockerfile
+├── entrypoint.py
+├── jobs
+│   └── extreme_weather.py
+└── pyproject.toml
+
+1 directory, 4 files
+```
+
+2. Now deploy and run on an EMR Serverless application!
+
+```bash
+emr run \
+    --entry-point entrypoint.py \
+    --application-id ${APPLICATION_ID} \
+    --job-role ${JOB_ROLE_ARN} \
+    --s3-code-uri  s3://${S3_BUCKET}/tmp/emr-cli-demo/ \
+    --build \
+    --wait
+```
+
+This command performs the following actions:
+
+- packages your project dependencies into a python virtual environment
+- Uploads the Spark entrypoint and packaged dependencies to S3
+- Starts an EMR Serverless job
+- Waits for the job to run to a successful completion!
+
+And you're done. Feel free to modify the project to experiement with different things. You can simply re-run the command above to re-package and re-deploy your job.
 
 ## pyspark code
 
@@ -22,65 +68,60 @@ Want to just write some `.sql` files and have those deployed? No problem.
 
 ## Sample Commands
 
-- Prepare a PySpark package with a single PySpark file.
+- Create a new PySpark project (other frameworks TBD)
 
-```shell
-emr package --target pyspark --version v0.0.1 --source ./jobs/main.py`
+```bash
+emr init project-dir
 ```
 
-- Provide multiple files (with the entrypoint first) to include local dependencies
+- Package your project into a virtual environment archive
 
-```shell
-emr package --target pyspark --version v0.0.1 --source ./jobs/main.py ./jobs/lib/*
+```bash
+emr package --entry-point main.py
 ```
 
-- Prepare a PySpark package with a setup.py file (`--version` is inferred from `setup.py`).
+The EMR CLI auto-detects the project type and will change the packaging method appropriately.
 
-```shell
-emr package --target pyspark --source setup.py
+If you have additional `.py` files, those will be included in the archive.
+
+- Deploy an existing package artifact to S3.
+
+```bash
+emr deploy --entry-point main.py --s3-code-uri s3://<BUCKET>/code/
 ```
 
-- Package and Deploy a PySpark package to S3
+- Deploy a PySpark package to S3 and trigger an EMR Serverless job
 
-```shell
-emr deploy --target pyspark
+```bash
+emr run --entry-point main.py \
+    --s3-code-uri s3://<BUCKET>/code/ \
+    --application-id <EMR_SERVERLESS_APP> \
+    --job-role <JOB_ROLE_ARN>
 ```
 
-- Package, deploy, and run a PySpark package on EMR Serverless
+- Build, deploy, and run an EMR Serverless job and wait for it to finish.
 
-```shell
-emr run --target pyspark --source setup.py --s3-code-uri s3://your-bucket/code/pyspark/ --application-id 1234567890
+```bash
+emr run --entry-point main.py \
+    --s3-code-uri s3://<BUCKET>/code/ \
+    --application-id <EMR_SERVERLESS_APP> \
+    --job-role <JOB_ROLE_ARN> \
+    --build \
+    --wait
 ```
 
-Note that if you've previously run package or deploy commands, other commands can be abbreviated.
+> **Note**: If the job fails, the command will exit with an error code.
 
-```shell
-emr run --application-id 1234567890
-```
+In the future, you'll also be able to do the following:
 
-You can also utilize the same code against an EMR on EC2 cluster
+- Utilize the same code against an EMR on EC2 cluster
 
-```shell
+```bash
 emr run --cluster-id j-8675309
 ```
 
-Or an EMR on EKS virtual cluster.
+- Or an EMR on EKS virtual cluster.
 
-```shell
+```bash
 emr run --virtual-cluster-id 654abacdefgh1uziuyackhrs1
 ```
-
-## Actual ToDo
-
-The first thing I want to do is make my `integration-test.sh` script unnecessary. 
-
-1. emr deploy s3://bucket/code/
-    - single `.py` file in your dirtree?
-    - copy
-2. emr run --wait --application-id 123456
-    - ask for an emr iam role
-3. Figure out versioning
-
-
-`deploy` command detects single/multiple pyspark deployments
-`run` command needs IAM role as well

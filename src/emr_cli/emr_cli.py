@@ -1,5 +1,5 @@
 import click
-
+from emr_cli.config import ConfigReader
 from emr_cli.packaging.detector import ProjectDetector
 
 from .deployments.emr_serverless import EMRServerless
@@ -9,23 +9,30 @@ from .packaging.python_project import PythonProject
 @click.group()
 @click.pass_context
 def cli(ctx):
+    # If we want the user to be able to force a project type, check out click.Choice
     ctx.obj = ProjectDetector().detect()
+
+    # If a config file exists, set those as defaults for all other options
+    ctx.default_map = ConfigReader.read()
 
 
 @click.command()
+@click.argument(
+    "path"
+)
 @click.option(
     "--dockerfile",
     default=False,
     is_flag=True,
     help="Only create a sample Dockerfile for packaging Python dependencies",
 )
-def init(dockerfile):
+def init(path, dockerfile):
     if dockerfile:
         click.echo("Creating sample Dockerfile...")
         PythonProject().copy_single_file("Dockerfile")
     else:
         click.echo("Initializing project")
-        PythonProject().initialize()
+        PythonProject().initialize(path)
 
 
 @click.command()
@@ -46,11 +53,15 @@ def package(project, entry_point):
     "--entry-point",
     type=click.Path(exists=True, dir_okay=False, allow_dash=False),
     help="PySpark file to deploy",
+    required=True,
 )
-@click.option("--s3-code-uri", help="Where to copy code artifacts to")
+@click.option(
+    "--s3-code-uri",
+    help="Where to copy code artifacts to",
+    required=True,
+)
 @click.pass_obj
 def deploy(project, entry_point, s3_code_uri):
-    # Copy the source to S3
     p = project(entry_point)
     p.deploy(s3_code_uri)
 

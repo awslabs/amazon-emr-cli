@@ -1,7 +1,7 @@
 # Base stage for python development
 FROM --platform=linux/amd64 amazonlinux:2 AS base
 
-RUN yum install -y python3
+RUN yum install -y python3 tar gzip
 
 ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
@@ -30,7 +30,7 @@ RUN mkdir /output && venv-pack -o /output/pyspark_deps.tar.gz
 FROM base as poetry-build
 RUN poetry self add poetry-plugin-bundle && \
     poetry bundle venv dist/bundle --without dev && \
-    tar -czvf dist/pyspark_deps.tar.gz -C $(shell pwd)/dist/bundle . && \
+    tar -czvf dist/pyspark_deps.tar.gz -C dist/bundle . && \
     rm -rf dist/bundle
 
 FROM scratch as export-poetry
