@@ -8,11 +8,15 @@ The EMR CLI supports a wide variety of configuration options to adapt to _your_ 
 2. Deployment - Easily deploy your Spark jobs across multiple EMR environments or deployment frameworks like EC2, EKS, and Serverless.
 3. CI/CD - Easily test each iteration of your code without resorting to messy shell scripts. :)
 
+The initial use cases are:
+1. Consistent packaging for PySpark projects.
+2. Use in CI/CD pipelines for packaging, deployment of artifacts, and integration testing.
+
 ## Quick Start
 
 You can use the EMR CLI to take a project from nothing to running in EMR Serverless is 2 steps.
 
-> **Note** This tutorial assumes you have already [setup EMR Serverless](https://docs.aws.amazon.com/emr/latest/EMR-Serverless-UserGuide/setting-up.html) and have an EMR Serverless application, job role, and S3 bucket you can use.
+> **Note** This tutorial assumes you have already [setup EMR Serverless](https://docs.aws.amazon.com/emr/latest/EMR-Serverless-UserGuide/setting-up.html) and have an EMR Serverless application, job role, and S3 bucket you can use. You can also use the `emr bootstrap` command.
 
 1. Create a sample project
 

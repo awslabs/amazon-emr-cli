@@ -1,8 +1,8 @@
 import click
-from emr_cli.config import ConfigReader
+from emr_cli.config import ConfigReader, ConfigWriter
 from emr_cli.packaging.detector import ProjectDetector
 
-from .deployments.emr_serverless import EMRServerless
+from .deployments.emr_serverless import Bootstrap, EMRServerless
 from .packaging.python_project import PythonProject
 
 
@@ -17,9 +17,57 @@ def cli(ctx):
 
 
 @click.command()
-@click.argument(
-    "path"
+@click.option(
+    "--target",
+    type=click.Choice(["emr-serverless"]),
+    help="Bootstrap a brand new environment.",
 )
+@click.option(
+    "--code-bucket", help="Bucket where source code will be uploaded", required=True
+)
+@click.option("--logs-bucket", help="Bucket where logs will be uploaded")
+@click.option(
+    "--job-role-name",
+    help="""
+The name of the IAM role to be created for your EMR Serverless jobs.
+This role has access to read and write to the source code and logs buckets,
+and access to read and create tables in the Glue Data Catalog.""",
+    required=True,
+)
+@click.option(
+    "--destroy",
+    default=False,
+    is_flag=True,
+    help="Prints the commands necessary to destroy the created environment.",
+)
+def bootstrap(target, code_bucket, logs_bucket, job_role_name, destroy):
+    """
+    Bootstraps your EMR environment of choice, including creating an S3 bucket,
+    tightly-scoped job roles, and relevant location emr cli configuration.
+    """
+    if destroy:
+        c = ConfigReader.read()
+        b = Bootstrap(code_bucket, logs_bucket, job_role_name)
+        b.print_destroy_commands(c.get("run", {}).get("application_id", None))
+        exit(0)
+
+    # For EMR Serverless, we need to create an S3 bucket, a job role, and an Application
+    b = Bootstrap(code_bucket, logs_bucket, job_role_name)
+    config = b.create_environment()
+
+    # The resulting config is relevant for the "run" command
+    run_config = {
+        "run": {
+            "application_id": config.get("application_id"),
+            "job_role": config.get("job_role_arn"),
+            "s3_code_uri": f"s3://{config.get('code_bucket')}/code/pyspark/",
+        }
+    }
+    ConfigWriter.write(run_config)
+
+
+@click.command()
+@click.argument("path")
 @click.option(
     "--dockerfile",
     default=False,
@@ -134,7 +182,7 @@ cli.add_command(package)
 cli.add_command(deploy)
 cli.add_command(run)
 cli.add_command(init)
-
+cli.add_command(bootstrap)
 
 if __name__ == "__main__":
     cli()

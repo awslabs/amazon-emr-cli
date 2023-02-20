@@ -1,4 +1,5 @@
 import abc
+import json
 import os
 import sys
 from time import sleep
@@ -32,6 +33,155 @@ class DeploymentPackage(metaclass=abc.ABCMeta):
         if self.s3_uri_base is None:
             raise Exception("S3 URI has not been set, aborting")
         return os.path.join(self.s3_uri_base, self.entry_point_path)
+
+
+class Bootstrap:
+    DEFAULT_S3_POLICY_NAME = "emr-cli-S3Access"
+    DEFAULT_GLUE_POLICY_NAME = "emr-cli-GlueAccess"
+
+    def __init__(self, code_bucket: str, log_bucket: str, job_role_name: str):
+        self.code_bucket = code_bucket
+        self.log_bucket = log_bucket or code_bucket
+        self.job_role_name = job_role_name
+        self.s3_client = boto3.client("s3")
+        self.iam_client = boto3.client("iam")
+        self.emrs_client = boto3.client("emr-serverless")
+
+    def create_environment(self):
+        self._create_s3_buckets()
+        job_role_arn = self._create_job_role()
+        app_id = self._create_application()
+        return {
+            "application_id": app_id,
+            "job_role_arn": job_role_arn,
+            "code_bucket": self.code_bucket,
+            "log_bucket": self.log_bucket,
+        }
+
+    def print_destroy_commands(self, application_id: str):
+        # fmt: off
+        for bucket in set([self.log_bucket, self.code_bucket]):
+            print(f"# aws s3 rm s3://{bucket} --force")
+        for policy in self.iam_client.list_attached_role_policies(RoleName=self.job_role_name).get('AttachedPolicies'):  # noqa E501
+            arn = policy.get('PolicyArn')
+            print(f"aws iam detach-role-policy --role-name {self.job_role_name} --policy-arn {arn}")  # noqa E501
+            print(f"aws iam delete-policy --policy-arn {arn}")  # noqa E501
+        print(f"aws iam delete-role --role-name {self.job_role_name}")
+        print(f"aws emr-serverless stop-application --application-id {application_id}")
+        print(f"aws emr-serverless delete-application --application-id {application_id}")  # noqa E501
+        # fmt: on
+
+    def _create_s3_buckets(self):
+        """
+        Creates both the source and log buckets if they don't already exist.
+        """
+        for bucket_name in set([self.code_bucket, self.log_bucket]):
+            self.s3_client.create_bucket(Bucket=bucket_name)
+            console_log(f"Created S3 bucket: s3://{bucket_name}")
+
+    def _create_job_role(self):
+        # First create a role that can be assumed by EMR Serverless jobs
+        response = self.iam_client.create_role(
+            RoleName=self.job_role_name,
+            AssumeRolePolicyDocument=json.dumps(
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {"Service": "emr-serverless.amazonaws.com"},
+                            "Action": "sts:AssumeRole",
+                        }
+                    ],
+                }
+            ),
+        )
+        role_arn = response.get("Role").get("Arn")
+        console_log(f"Created IAM Role: {role_arn}")
+
+        self.iam_client.attach_role_policy(
+            RoleName=self.job_role_name, PolicyArn=self._create_s3_policy()
+        )
+        self.iam_client.attach_role_policy(
+            RoleName=self.job_role_name, PolicyArn=self._create_glue_policy()
+        )
+
+        return role_arn
+
+    def _create_s3_policy(self):
+        bucket_arns = [
+            f"arn:aws:s3:::{name}" for name in [self.code_bucket, self.log_bucket]
+        ]
+        policy_doc = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "AllowListBuckets",
+                    "Effect": "Allow",
+                    "Action": ["s3:ListBucket"],
+                    "Resource": bucket_arns,
+                },
+                {
+                    "Sid": "WriteToCodeAndLogBuckets",
+                    "Effect": "Allow",
+                    "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+                    "Resource": [f"{arn}/*" for arn in bucket_arns],
+                },
+            ],
+        }
+        response = self.iam_client.create_policy(
+            PolicyName=self.DEFAULT_S3_POLICY_NAME,
+            PolicyDocument=json.dumps(policy_doc),
+        )
+        return response.get("Policy").get("Arn")
+
+    def _create_glue_policy(self):
+        policy_doc = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "GlueCreateAndReadDataCatalog",
+                    "Effect": "Allow",
+                    "Action": [
+                        "glue:GetDatabase",
+                        "glue:GetDataBases",
+                        "glue:CreateTable",
+                        "glue:GetTable",
+                        "glue:GetTables",
+                        "glue:GetPartition",
+                        "glue:GetPartitions",
+                        "glue:CreatePartition",
+                        "glue:BatchCreatePartition",
+                        "glue:GetUserDefinedFunctions",
+                    ],
+                    "Resource": "*",
+                },
+            ],
+        }
+        response = self.iam_client.create_policy(
+            PolicyName=self.DEFAULT_GLUE_POLICY_NAME,
+            PolicyDocument=json.dumps(policy_doc),
+        )
+        return response.get("Policy").get("Arn")
+
+    def _create_application(self):
+        """
+        Create a simple Spark EMR Serverless application with a default (but minimal)
+        pre-initialized capacity.
+
+        This application is only intended for demo purposes only. To customize the
+        application or create an application for production, use the AWS CLI or other
+        Infrastructure as Code services like Terraform, CDK, or CloudFormation.
+        """
+        response = self.emrs_client.create_application(
+            name="emr-cli-demo",
+            releaseLabel="emr-6.9.0",
+            type="SPARK",
+        )
+        app_id = response.get("applicationId")
+        console_log(f"Created EMR Serverless application: {app_id}")
+        self.emrs_client.start_application(applicationId=app_id)
+        return app_id
 
 
 class EMRServerless:
