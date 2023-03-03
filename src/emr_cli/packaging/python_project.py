@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import boto3
+
 from emr_cli.deployments.emr_serverless import DeploymentPackage
 from emr_cli.utils import console_log, parse_bucket_uri
 
@@ -44,7 +45,7 @@ class PythonProject(DeploymentPackage):
         """
         if not Path("Dockerfile").exists():
             print(
-                "Error: No Dockerfile present, use 'emr-cli init --dockerfile' to generate one"
+                "Error: No Dockerfile present, use 'emr-cli init --dockerfile' to generate one"  # noqa: E501
             )
             sys.exit(1)
         if not Path("pyproject.toml").exists():
@@ -83,4 +84,4 @@ class PythonProject(DeploymentPackage):
 
     def spark_submit_parameters(self) -> str:
         tar_path = os.path.join(self.s3_uri_base, "pyspark_deps.tar.gz")
-        return f"--conf spark.archives={tar_path}#environment --conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=./environment/bin/python --conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python"
+        return f"--conf spark.archives={tar_path}#environment --conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=./environment/bin/python --conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python"  # noqa: E501

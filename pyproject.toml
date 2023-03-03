@@ -6,6 +6,12 @@ dependencies = [
     "boto3~=1.26.6"
 ]
 
+[project.optional-dependencies]
+tests = [
+  "pytest==7.2.2",
+  "pyfakefs==5.12.0"
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
