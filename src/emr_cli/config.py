@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import yaml
+
 from emr_cli.utils import console_log
 
 DEFAULT_CONFIG_PATH = ".emr/config.yaml"

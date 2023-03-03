@@ -1,13 +1,15 @@
 import os
 
 import boto3
-from emr_cli.deployments.emr_serverless import DeploymentPackage
 
+from emr_cli.deployments.emr_serverless import DeploymentPackage
 from emr_cli.utils import console_log, parse_bucket_uri
+
 
 class SimpleProject(DeploymentPackage):
     """
-    A simple project only has a single entry point file. This can be a pyspark file or packaged jar file.
+    A simple project only has a single entry point file.
+    This can be a pyspark file or packaged jar file.
     """
 
     def build(self):

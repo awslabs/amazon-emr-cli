@@ -3,11 +3,8 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import List
-from urllib.parse import urlparse
 
 import boto3
-
 from emr_cli.deployments.emr_serverless import DeploymentPackage
 from emr_cli.utils import console_log, parse_bucket_uri
 

@@ -21,6 +21,7 @@ def parse_bucket_uri(uri: str) -> List[str]:
     result = urlparse(uri, allow_fragments=False)
     return [result.netloc, result.path.strip("/")]
 
+
 def mkdir(path: str):
     try:
         os.mkdir(path)

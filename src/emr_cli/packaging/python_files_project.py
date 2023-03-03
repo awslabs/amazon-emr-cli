@@ -1,30 +1,33 @@
 import os
 import zipfile
+
+import boto3
+
 from emr_cli.deployments.emr_serverless import DeploymentPackage
 from emr_cli.utils import console_log, find_files, mkdir, parse_bucket_uri
-import boto3
+
 
 class PythonFilesProject(DeploymentPackage):
     """
     A PythonFilesProject is a simple project that includes multiple `.py` files.
 
-    This is a simple project that has no external dependencies and requires no additional packaging.
-    The files in the project are simply zipped up.
+    This is a simple project that has no external dependencies and requires no
+    additional packaging. The files in the project are simply zipped up.
     """
 
     def build(self):
         """
         Zip all the files except for the entrypoint file.
         """
-        py_files = find_files(os.getcwd(), ['.venv'], '.py')
+        py_files = find_files(os.getcwd(), [".venv"], ".py")
         py_files.remove(os.path.abspath(self.entry_point_path))
         cwd = os.getcwd()
         mkdir(self.dist_dir)
-        with zipfile.ZipFile(f"{self.dist_dir}/pyfiles.zip", 'w') as zf:
+        with zipfile.ZipFile(f"{self.dist_dir}/pyfiles.zip", "w") as zf:
             for file in py_files:
                 relpath = os.path.relpath(file, cwd)
                 zf.write(file, relpath)
-    
+
     def deploy(self, s3_code_uri: str) -> str:
         """
         Copies local code to S3 and returns the path to the uploaded entrypoint

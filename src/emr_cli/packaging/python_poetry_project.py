@@ -6,6 +6,7 @@ from typing import List
 from urllib.parse import urlparse
 
 import boto3
+
 from emr_cli.deployments.emr_serverless import DeploymentPackage
 from emr_cli.utils import console_log
 
@@ -41,11 +42,11 @@ class PythonPoetryProject(DeploymentPackage):
             check=True,
             env=dict(os.environ, DOCKER_BUILDKIT="1"),
         )
-    
+
     def _dockerfile_path(self) -> str:
         if Path("Dockerfile").is_file():
             return "Dockerfile"
-        
+
         templates = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "..", "templates", "pyspark")
         )
