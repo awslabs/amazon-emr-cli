@@ -9,6 +9,7 @@ The EMR CLI supports a wide variety of configuration options to adapt to _your_ 
 3. CI/CD - Easily test each iteration of your code without resorting to messy shell scripts. :)
 
 The initial use cases are:
+
 1. Consistent packaging for PySpark projects.
 2. Use in CI/CD pipelines for packaging, deployment of artifacts, and integration testing.
 
@@ -131,3 +132,11 @@ emr run --cluster-id j-8675309
 ```bash
 emr run --virtual-cluster-id 654abacdefgh1uziuyackhrs1
 ```
+
+## Security
+
+See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+
+## License
+
+This project is licensed under the Apache-2.0 License.
