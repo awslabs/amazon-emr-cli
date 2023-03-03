@@ -12,6 +12,8 @@ The initial use cases are:
 1. Consistent packaging for PySpark projects.
 2. Use in CI/CD pipelines for packaging, deployment of artifacts, and integration testing.
 
+> **Warning**: This tool is still under active development, so commands may change until a stable 1.0 release is made.
+
 ## Quick Start
 
 You can use the EMR CLI to take a project from nothing to running in EMR Serverless is 2 steps.
@@ -51,22 +53,22 @@ emr run \
 
 This command performs the following actions:
 
-- packages your project dependencies into a python virtual environment
+- Packages your project dependencies into a python virtual environment
 - Uploads the Spark entrypoint and packaged dependencies to S3
 - Starts an EMR Serverless job
 - Waits for the job to run to a successful completion!
 
-And you're done. Feel free to modify the project to experiement with different things. You can simply re-run the command above to re-package and re-deploy your job.
+And you're done. Feel free to modify the project to experiment with different things. You can simply re-run the command above to re-package and re-deploy your job.
 
 ## pyspark code
 
 In many organizations, PySpark is the primary language for writing Spark jobs. But Python projects can be structured in a variety of ways – a single `.py` file, `requirements.txt`, `setup.py` files, or even `poetry` configurations. EMR CLI aims to bundle your PySpark code the same way regardless of which system you use.
 
-## Spark scala code
+## Spark scala code (coming)
 
 While Spark Scala or Java code will be more standard from a packaging perspective, it's still useful to able to easily deploy and run your jobs across multiple EMR environments.
 
-## Spark SQL
+## Spark SQL (coming)
 
 Want to just write some `.sql` files and have those deployed? No problem.
 
