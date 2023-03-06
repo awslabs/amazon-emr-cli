@@ -33,7 +33,6 @@ def status(project):
 @click.option(
     "--profile",
     help="The AWS profile to use for bootstraping the environment.",
-    required=True,
 )
 @click.option(
     "--target",
