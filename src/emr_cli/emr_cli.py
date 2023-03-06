@@ -149,6 +149,10 @@ def deploy(project, entry_point, s3_code_uri):
 
 
 @click.command()
+@click.option(
+    "--profile",
+    help="The AWS profile to use for bootstraping the environment.",
+)
 @click.option("--application-id", help="EMR Serverless Application ID")
 @click.option("--cluster-id", help="EMR on EC2 Cluster ID")
 @click.option(
