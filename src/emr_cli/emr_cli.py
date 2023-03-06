@@ -31,6 +31,11 @@ def status(project):
 
 @click.command()
 @click.option(
+    "--profile",
+    help="The AWS profile to use for bootstraping the environment.",
+    required=True,
+)
+@click.option(
     "--target",
     type=click.Choice(["emr-serverless"]),
     help="Bootstrap a brand new environment.",
@@ -53,7 +58,7 @@ and access to read and create tables in the Glue Data Catalog.""",
     is_flag=True,
     help="Prints the commands necessary to destroy the created environment.",
 )
-def bootstrap(target, code_bucket, logs_bucket, job_role_name, destroy):
+def bootstrap(profile, target, code_bucket, logs_bucket, job_role_name, destroy):
     """
     Bootstrap an EMR Serverless environment.
 
@@ -62,12 +67,12 @@ def bootstrap(target, code_bucket, logs_bucket, job_role_name, destroy):
     """
     if destroy:
         c = ConfigReader.read()
-        b = Bootstrap(code_bucket, logs_bucket, job_role_name)
+        b = Bootstrap(profile, code_bucket, logs_bucket, job_role_name)
         b.print_destroy_commands(c.get("run", {}).get("application_id", None))
         exit(0)
 
     # For EMR Serverless, we need to create an S3 bucket, a job role, and an Application
-    b = Bootstrap(code_bucket, logs_bucket, job_role_name)
+    b = Bootstrap(profile, code_bucket, logs_bucket, job_role_name)
     config = b.create_environment()
 
     # The resulting config is relevant for the "run" command
