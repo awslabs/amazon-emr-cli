@@ -96,7 +96,8 @@ class Bootstrap (EmrBase):
         Creates both the source and log buckets if they don't already exist.
         """
         for bucket_name in set([self.code_bucket, self.log_bucket]):
-            self.s3_client.create_bucket(Bucket=bucket_name)
+
+            self.s3_client.create_bucket(Bucket=bucket_name, CreateBucketConfiguration= {'LocationConstraint': self.aws_session.region_name})
             console_log(f"Created S3 bucket: s3://{bucket_name}")
 
     def _create_job_role(self):
