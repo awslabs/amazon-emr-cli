@@ -74,13 +74,20 @@ def bootstrap(target, code_bucket, logs_bucket, job_role_name, destroy):
     is_flag=True,
     help="Only create a sample Dockerfile for packaging Python dependencies",
 )
-def init(path, dockerfile):
+@click.option(
+    "--project-type",
+    type=click.Choice(["python", "poetry"]),
+    help="The type of project to create.",
+    default="python",
+)
+def init(path, dockerfile, project_type):
     if dockerfile:
         click.echo("Creating sample Dockerfile...")
         PythonProject().copy_single_file("Dockerfile")
     else:
+        kls = ProjectDetector().detect(project_type)
         click.echo("Initializing project")
-        PythonProject().initialize(path)
+        kls().initialize(path)
 
 
 @click.command()

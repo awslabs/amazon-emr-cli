@@ -8,10 +8,22 @@ from urllib.parse import urlparse
 import boto3
 
 from emr_cli.deployments.emr_serverless import DeploymentPackage
-from emr_cli.utils import console_log
+from emr_cli.utils import console_log, copy_template
 
 
 class PythonPoetryProject(DeploymentPackage):
+    def initialize(self, target_dir: str = os.getcwd()):
+        """
+        Initializes a poetry-based pyspark project in the provided directory.
+        - Creates a basic poetry project
+        - Creates a pyproject.toml file
+        - Creates a Dockerfile
+        """
+        console_log(f"Initializing project in {target_dir}")
+        copy_template("pyspark", target_dir)
+        copy_template("poetry", target_dir)
+        console_log("Project initialized.")
+
     def build(self):
         if not Path("poetry.lock").exists():
             print("Error: No poetry.lock present, please setup your poetry project.")
@@ -72,6 +84,10 @@ class PythonPoetryProject(DeploymentPackage):
         )
 
         return f"s3://{bucket}/{prefix}/{filename}"
+
+    def spark_submit_parameters(self) -> str:
+        tar_path = os.path.join(self.s3_uri_base, "pyspark_deps.tar.gz")
+        return f"--conf spark.archives={tar_path}#environment --conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=./environment/bin/python --conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python"  # noqa: E501
 
     def _parse_bucket_uri(self, uri: str) -> List[str]:
         result = urlparse(uri, allow_fragments=False)

@@ -13,10 +13,9 @@ from emr_cli.utils import console_log, parse_bucket_uri
 class PythonProject(DeploymentPackage):
     def initialize(self, target_dir: str = os.getcwd()):
         """
-        Initializes a pyspark project in the current directory.
+        Initializes a pyspark project in the provided directory.
         - Creates a basic project
         - Creates a pyproject.toml file
-        - Creates a Dockerfile.build
         - Creates a Dockerfile
         """
         console_log(f"Initializing project in {target_dir}")

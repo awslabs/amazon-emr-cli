@@ -1,4 +1,5 @@
 import os
+import shutil
 from typing import List
 from urllib.parse import urlparse
 
@@ -27,3 +28,10 @@ def mkdir(path: str):
         os.mkdir(path)
     except FileExistsError:
         pass
+
+
+def copy_template(source: str, target_dir: str):
+    source = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "templates", source)
+    )
+    shutil.copytree(source, target_dir, dirs_exist_ok=True)
