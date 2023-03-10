@@ -28,7 +28,7 @@ S3_BUCKET=<s3-bucket-name>
 
 ```
 emr run \
-    --entry-point main.py \
+    --entry-point entrypoint.py \
     --application-id ${APPLICATION_ID} \
     --job-role ${JOB_ROLE_ARN} \
     --s3-code-uri  s3://${S3_BUCKET}/tmp/emr-cli-demo-poetry/ \
