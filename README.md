@@ -27,6 +27,8 @@ You can use the EMR CLI to take a project from nothing to running in EMR Serverl
 emr init scratch
 ```
 
+> 📔 Tip: Use `--project-type poetry` to create a [Poetry](https://python-poetry.org/) project!
+
 You should now have a sample PySpark project in your scratch directory.
 
 ```
