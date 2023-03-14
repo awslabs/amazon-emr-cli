@@ -36,12 +36,19 @@ jobs:
     - 
       name: Install dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --no-root
+      shell: bash
+      run: |
+        source $VENV
+        poetry install --no-interaction --no-root
     - 
       name: Install project
-      run: poetry install --no-interaction
+      shell: bash
+      run: |
+        source $VENV
+        poetry install --no-interaction
     - 
       name: Run tests
+      shell: bash
       run: |
-        source .venv/bin/activate
+        source $VENV
         pytest --cov emr_cli tests/
