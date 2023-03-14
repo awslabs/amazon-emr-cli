@@ -1,5 +1,6 @@
 import os
-import shutil
+from pathlib import Path
+from shutil import copytree, ignore_patterns
 from typing import List
 from urllib.parse import urlparse
 
@@ -31,7 +32,10 @@ def mkdir(path: str):
 
 
 def copy_template(source: str, target_dir: str):
-    source = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "templates", source)
+    """
+    Copies the entire `source` directory to `target_dir`.
+    """
+    source = os.path.abspath(Path(__file__).parent.parent / "templates" / source)
+    copytree(
+        source, target_dir, dirs_exist_ok=True, ignore=ignore_patterns("__pycache__")
     )
-    shutil.copytree(source, target_dir, dirs_exist_ok=True)
