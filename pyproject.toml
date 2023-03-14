@@ -1,19 +1,23 @@
-[project]
+[tool.poetry]
 name = "emr-cli"
 version = "0.0.1"
-dependencies = [
-    "click==7.1.2",
-    "boto3~=1.26.6"
-]
+description = "A command-line interface for packaging, deploying, and running your EMR Serverless Spark jobs."
+authors = ["Amazon EMR <emr-developer-advocates@amazon.com>"]
+license = "Apache-2.0"
+readme = "README.md"
 
-[project.optional-dependencies]
-tests = [
-  "pytest==7.2.2",
-  "pyfakefs==5.12.0"
-]
+[tool.poetry.dependencies]
+python = "^3.9"
+click = "^7.1.2"
+boto3 = "^1.26.6"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.poetry.group.dev.dependencies]
+pytest = "7.2.2"
+pyfakefs = "5.12.0"
 
-[project.scripts]
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
 emr = "emr_cli.emr_cli:cli"
