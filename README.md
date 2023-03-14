@@ -19,10 +19,10 @@ The initial use cases are:
 
 You can use the EMR CLI to take a project from nothing to running in EMR Serverless is 2 steps.
 
-First, let's install the `emr` command from this repository (PyPi support coming soon).
+First, let's install the `emr` command from this PyPi.
 
 ```bash
-python3 -m pip install git+https://github.com/awslabs/amazon-emr-cli
+python3 -m pip install -U emr-cli
 ```
 
 > **Note** This tutorial assumes you have already [setup EMR Serverless](https://docs.aws.amazon.com/emr/latest/EMR-Serverless-UserGuide/setting-up.html) and have an EMR Serverless application, job role, and S3 bucket you can use. You can also use the `emr bootstrap` command.
