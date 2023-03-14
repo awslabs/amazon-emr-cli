@@ -35,10 +35,7 @@ def copy_template(source: str, target_dir: str):
     """
     Copies the entire `source` directory to `target_dir`.
     """
-    source = os.path.abspath(
-        Path(__file__).parent.parent / "templates" / source
-    )
+    source = os.path.abspath(Path(__file__).parent.parent / "templates" / source)
     copytree(
         source, target_dir, dirs_exist_ok=True, ignore=ignore_patterns("__pycache__")
-    )
     )
