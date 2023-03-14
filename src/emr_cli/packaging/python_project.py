@@ -1,13 +1,13 @@
 import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
+from shutil import copy
 
 import boto3
 
 from emr_cli.deployments.emr_serverless import DeploymentPackage
-from emr_cli.utils import console_log, parse_bucket_uri
+from emr_cli.utils import console_log, copy_template, parse_bucket_uri
 
 
 class PythonProject(DeploymentPackage):
@@ -19,7 +19,7 @@ class PythonProject(DeploymentPackage):
         - Creates a Dockerfile
         """
         console_log(f"Initializing project in {target_dir}")
-        self._copy_template(target_dir)
+        copy_template("pyspark", target_dir)
         console_log("Project initialized.")
 
     def copy_single_file(self, relative_file_path: str, target_dir: str = os.getcwd()):
@@ -30,13 +30,7 @@ class PythonProject(DeploymentPackage):
             Path(__file__).parent.parent / "templates" / "pyspark" / relative_file_path
         )
         target_path = Path(target_dir)
-        shutil.copy(template_path, target_path)
-
-    def _copy_template(self, target_dir: str):
-        source = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "templates", "pyspark")
-        )
-        shutil.copytree(source, target_dir, dirs_exist_ok=True)
+        copy(template_path, target_path)
 
     def build(self):
         """
