@@ -6,6 +6,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
     - uses: actions/checkout@v3
     - 
@@ -36,19 +39,16 @@ jobs:
     - 
       name: Install dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      shell: bash
       run: |
         source $VENV
         poetry install --no-interaction --no-root
     - 
       name: Install project
-      shell: bash
       run: |
         source $VENV
         poetry install --no-interaction
     - 
       name: Run tests
-      shell: bash
       run: |
         source $VENV
         pytest --cov emr_cli tests/
