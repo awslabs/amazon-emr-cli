@@ -40,12 +40,10 @@ jobs:
       name: Install dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: |
-        source $VENV
         poetry install --no-interaction --no-root
     - 
       name: Install project
       run: |
-        source $VENV
         poetry install --no-interaction
     - 
       name: Run tests
