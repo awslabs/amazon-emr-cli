@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "emr-cli"
-version = "0.0.1"
+version = "0.0.4"
 description = "A command-line interface for packaging, deploying, and running your EMR Serverless Spark jobs."
 authors = ["Amazon EMR <emr-developer-advocates@amazon.com>"]
 license = "Apache-2.0"
