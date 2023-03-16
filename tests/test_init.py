@@ -14,7 +14,7 @@ class TestInit:
 
     def test_poetry_init(self, tmp_path):
         p = PythonPoetryProject()
-        target_path = tmp_path / "python_proj"
+        target_path = tmp_path / "python_poetry_proj"
         p.initialize(target_path)
         assert (target_path / "entrypoint.py").exists()
         assert (target_path / "pyproject.toml").exists()
