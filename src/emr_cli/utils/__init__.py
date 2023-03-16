@@ -1,7 +1,7 @@
 import os
 import sys
 from pathlib import Path
-from shutil import copytree, ignore_patterns
+from shutil import copyfile, copytree, ignore_patterns
 from typing import List
 from urllib.parse import urlparse
 
@@ -38,7 +38,7 @@ def copy_template(source: str, target_dir: str):
     """
     source = os.path.abspath(Path(__file__).parent.parent / "templates" / source)
     if sys.version_info.major == 3 and sys.version_info.minor == 7:
-        copytree(source, target_dir, ignore=ignore_patterns("__pycache__"))
+        py37_copytree(source, target_dir, ignore=ignore_patterns("__pycache__"))
     else:
         copytree(
             source,
@@ -46,3 +46,22 @@ def copy_template(source: str, target_dir: str):
             dirs_exist_ok=True,
             ignore=ignore_patterns("__pycache__"),
         )
+
+
+def py37_copytree(src, dest, ignore=None):
+    """
+    A Python3 3.7 version of shutils.copytree since `dirs_exist_ok` was introduced in 3.8
+    """
+    if os.path.isdir(src):
+        if not os.path.isdir(dest):
+            os.makedirs(dest)
+        files = os.listdir(src)
+        if ignore is not None:
+            ignored = ignore(src, files)
+        else:
+            ignored = set()
+        for f in files:
+            if f not in ignored:
+                py37_copytree(os.path.join(src, f), os.path.join(dest, f), ignore)
+    else:
+        copyfile(src, dest)
