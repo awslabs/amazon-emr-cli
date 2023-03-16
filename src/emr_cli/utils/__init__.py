@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from shutil import copytree, ignore_patterns
 from typing import List
@@ -36,6 +37,12 @@ def copy_template(source: str, target_dir: str):
     Copies the entire `source` directory to `target_dir`.
     """
     source = os.path.abspath(Path(__file__).parent.parent / "templates" / source)
-    copytree(
-        source, target_dir, dirs_exist_ok=True, ignore=ignore_patterns("__pycache__")
-    )
+    if sys.version_info.major == 3 and sys.version_info.minor == 7:
+        copytree(source, target_dir, ignore=ignore_patterns("__pycache__"))
+    else:
+        copytree(
+            source,
+            target_dir,
+            dirs_exist_ok=True,
+            ignore=ignore_patterns("__pycache__"),
+        )
