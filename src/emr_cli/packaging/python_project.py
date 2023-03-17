@@ -3,9 +3,11 @@ import subprocess
 import sys
 from pathlib import Path
 from shutil import copy
+from typing import Dict
 
 import boto3
 
+from emr_cli.deployments import SparkParams
 from emr_cli.deployments.emr_serverless import DeploymentPackage
 from emr_cli.utils import console_log, copy_template, parse_bucket_uri
 
@@ -75,6 +77,26 @@ class PythonProject(DeploymentPackage):
 
         return f"s3://{bucket}/{prefix}/{filename}"
 
-    def spark_submit_parameters(self) -> str:
+    def spark_submit_parameters(self) -> SparkParams:
         tar_path = os.path.join(self.s3_uri_base, "pyspark_deps.tar.gz")
-        return f"--conf spark.archives={tar_path}#environment --conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=./environment/bin/python --conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python"  # noqa: E501
+        # return f"--conf spark.archives={tar_path}#environment --conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=./environment/bin/python --conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python"  # noqa: E501
+        # return {
+        #     'common': {
+        #         'spark.archives': f"{tar_path}#environment",
+        #     },
+        #     'emr_serverless': {
+        #         'spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON': './environment/bin/python',
+        #         'spark.emr-serverless.driverEnv.PYSPARK_PYTHON': './environment/bin/python',
+        #         'spark.executorEnv.PYSPARK_PYTHON': './environment/bin/python',
+        #     }
+        # }
+        return SparkParams(
+            common_params={
+                "spark.archives": f"{tar_path}#environment",
+            },
+            emr_serverless_params={
+                "spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON": "./environment/bin/python",
+                "spark.emr-serverless.driverEnv.PYSPARK_PYTHON": "./environment/bin/python",
+                "spark.executorEnv.PYSPARK_PYTHON": "./environment/bin/python",
+            },
+        )

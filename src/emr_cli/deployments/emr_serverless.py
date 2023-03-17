@@ -3,10 +3,11 @@ import json
 import os
 import sys
 from time import sleep
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import boto3
 
+from emr_cli.deployments import SparkParams
 from emr_cli.utils import console_log
 
 
@@ -20,11 +21,11 @@ class DeploymentPackage(metaclass=abc.ABCMeta):
         # We might not populate this until we actually deploy
         self.s3_uri_base = s3_target_uri
 
-    def spark_submit_parameters(self) -> str:
+    def spark_submit_parameters(self) -> SparkParams:
         """
         Returns any additional arguments necessary for spark-submit
         """
-        return ""
+        return SparkParams()
 
     def entrypoint_uri(self) -> str:
         """
@@ -214,13 +215,7 @@ class EMRServerless:
                 "entryPoint": self.dp.entrypoint_uri(),
             }
         }
-        spark_submit_parameters = ""
-
-        if len(self.dp.spark_submit_parameters()) > 0:
-            spark_submit_parameters = self.dp.spark_submit_parameters().strip()
-
-        if spark_submit_opts:
-            spark_submit_parameters += f" {spark_submit_opts}".strip()
+        spark_submit_parameters = self.dp.spark_submit_parameters().params_for("emr_serverless")
 
         if spark_submit_parameters:
             jobDriver["sparkSubmit"]["sparkSubmitParameters"] = spark_submit_parameters
