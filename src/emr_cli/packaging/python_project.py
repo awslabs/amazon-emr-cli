@@ -79,17 +79,6 @@ class PythonProject(DeploymentPackage):
 
     def spark_submit_parameters(self) -> SparkParams:
         tar_path = os.path.join(self.s3_uri_base, "pyspark_deps.tar.gz")
-        # return f"--conf spark.archives={tar_path}#environment --conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=./environment/bin/python --conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python"  # noqa: E501
-        # return {
-        #     'common': {
-        #         'spark.archives': f"{tar_path}#environment",
-        #     },
-        #     'emr_serverless': {
-        #         'spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON': './environment/bin/python',
-        #         'spark.emr-serverless.driverEnv.PYSPARK_PYTHON': './environment/bin/python',
-        #         'spark.executorEnv.PYSPARK_PYTHON': './environment/bin/python',
-        #     }
-        # }
         return SparkParams(
             common_params={
                 "spark.archives": f"{tar_path}#environment",
@@ -99,4 +88,8 @@ class PythonProject(DeploymentPackage):
                 "spark.emr-serverless.driverEnv.PYSPARK_PYTHON": "./environment/bin/python",
                 "spark.executorEnv.PYSPARK_PYTHON": "./environment/bin/python",
             },
+            emr_ec2_params={
+                "spark.executorEnv.PYSPARK_PYTHON": "./environment/bin/python",
+                "spark.yarn.appMasterEnv.PYSPARK_PYTHON": "./environment/bin/python",
+            }
         )

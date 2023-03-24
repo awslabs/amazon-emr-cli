@@ -175,6 +175,7 @@ def run(
         p.build()
         p.deploy(s3_code_uri)
 
+    # application_id indicates EMR Serverless job
     if application_id is not None:
         # We require entry-point and job-role
         if entry_point is None or job_role is None:
@@ -187,11 +188,12 @@ def run(
         emrs = EMRServerless(application_id, job_role, p)
         emrs.run_job(job_name, job_args, spark_submit_opts, wait)
 
+    # cluster_id indicates EMR on EC2 job
     if cluster_id is not None:
         if job_args:
             job_args = job_args.split(",")
-        emrs = EMREC2(cluster_id, p)
-        emrs.run_job(job_name, job_args, spark_submit_opts)
+        emr = EMREC2(cluster_id, p)
+        emr.run_job(job_name, job_args, wait)
 
 
 cli.add_command(package)
