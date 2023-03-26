@@ -3,7 +3,6 @@ import subprocess
 import sys
 from pathlib import Path
 from shutil import copy
-from typing import Dict
 
 import boto3
 
@@ -91,5 +90,5 @@ class PythonProject(DeploymentPackage):
             emr_ec2_params={
                 "spark.executorEnv.PYSPARK_PYTHON": "./environment/bin/python",
                 "spark.yarn.appMasterEnv.PYSPARK_PYTHON": "./environment/bin/python",
-            }
+            },
         )

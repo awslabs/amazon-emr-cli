@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 
 import boto3
 
+from emr_cli.deployments import SparkParams
 from emr_cli.deployments.emr_serverless import DeploymentPackage
 from emr_cli.utils import console_log, copy_template
 
@@ -85,9 +86,22 @@ class PythonPoetryProject(DeploymentPackage):
 
         return f"s3://{bucket}/{prefix}/{filename}"
 
-    def spark_submit_parameters(self) -> str:
+    def spark_submit_parameters(self) -> SparkParams:
         tar_path = os.path.join(self.s3_uri_base, "pyspark_deps.tar.gz")
-        return f"--conf spark.archives={tar_path}#environment --conf spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON=./environment/bin/python --conf spark.emr-serverless.driverEnv.PYSPARK_PYTHON=./environment/bin/python --conf spark.executorEnv.PYSPARK_PYTHON=./environment/bin/python"  # noqa: E501
+        return SparkParams(
+            common_params={
+                "spark.archives": f"{tar_path}#environment",
+            },
+            emr_serverless_params={
+                "spark.emr-serverless.driverEnv.PYSPARK_DRIVER_PYTHON": "./environment/bin/python",
+                "spark.emr-serverless.driverEnv.PYSPARK_PYTHON": "./environment/bin/python",
+                "spark.executorEnv.PYSPARK_PYTHON": "./environment/bin/python",
+            },
+            emr_ec2_params={
+                "spark.executorEnv.PYSPARK_PYTHON": "./environment/bin/python",
+                "spark.yarn.appMasterEnv.PYSPARK_PYTHON": "./environment/bin/python",
+            },
+        )
 
     def _parse_bucket_uri(self, uri: str) -> List[str]:
         result = urlparse(uri, allow_fragments=False)

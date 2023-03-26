@@ -4,7 +4,7 @@ import os
 import sys
 import zipfile
 from time import sleep
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import boto3
 
@@ -229,7 +229,9 @@ class EMRServerless:
                 "entryPoint": self.dp.entrypoint_uri(),
             }
         }
-        spark_submit_parameters = self.dp.spark_submit_parameters().params_for("emr_serverless")
+        spark_submit_parameters = self.dp.spark_submit_parameters().params_for(
+            "emr_serverless"
+        )
 
         if spark_submit_parameters:
             jobDriver["sparkSubmit"]["sparkSubmitParameters"] = spark_submit_parameters
