@@ -19,7 +19,7 @@ The initial use cases are:
 
 You can use the EMR CLI to take a project from nothing to running in EMR Serverless is 2 steps.
 
-First, let's install the `emr` command from this PyPi.
+First, let's install the `emr` command.
 
 ```bash
 python3 -m pip install -U emr-cli
