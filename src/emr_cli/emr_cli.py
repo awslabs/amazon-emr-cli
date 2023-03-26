@@ -164,6 +164,12 @@ def run(
     spark_submit_opts,
     build,
 ):
+    # Either a cluster or applciation ID must be specified
+    if cluster_id is None and application_id is None:
+        raise click.BadArgumentUsage(
+            "Either --application-id or --cluster-id must be specified."
+        )
+        
     # We require entry-point and s3-code-uri
     if entry_point is None or s3_code_uri is None:
         raise click.BadArgumentUsage(
