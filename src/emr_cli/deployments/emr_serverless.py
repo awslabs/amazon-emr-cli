@@ -2,12 +2,14 @@ import abc
 import json
 import os
 import sys
+import zipfile
 from time import sleep
 from typing import List, Optional
 
 import boto3
 
-from emr_cli.utils import console_log
+from emr_cli.deployments import SparkParams
+from emr_cli.utils import console_log, find_files, mkdir
 
 
 class DeploymentPackage(metaclass=abc.ABCMeta):
@@ -20,11 +22,11 @@ class DeploymentPackage(metaclass=abc.ABCMeta):
         # We might not populate this until we actually deploy
         self.s3_uri_base = s3_target_uri
 
-    def spark_submit_parameters(self) -> str:
+    def spark_submit_parameters(self) -> SparkParams:
         """
         Returns any additional arguments necessary for spark-submit
         """
-        return ""
+        return SparkParams()
 
     def entrypoint_uri(self) -> str:
         """
@@ -33,6 +35,19 @@ class DeploymentPackage(metaclass=abc.ABCMeta):
         if self.s3_uri_base is None:
             raise Exception("S3 URI has not been set, aborting")
         return os.path.join(self.s3_uri_base, self.entry_point_path)
+
+    def _zip_local_pyfiles(self):
+        """
+        Zip all the files except for the entrypoint file.
+        """
+        py_files = find_files(os.getcwd(), [".venv"], ".py")
+        py_files.remove(os.path.abspath(self.entry_point_path))
+        cwd = os.getcwd()
+        mkdir(self.dist_dir)
+        with zipfile.ZipFile(f"{self.dist_dir}/pyfiles.zip", "w") as zf:
+            for file in py_files:
+                relpath = os.path.relpath(file, cwd)
+                zf.write(file, relpath)
 
 
 class Bootstrap:
@@ -214,10 +229,9 @@ class EMRServerless:
                 "entryPoint": self.dp.entrypoint_uri(),
             }
         }
-        spark_submit_parameters = ""
-
-        if len(self.dp.spark_submit_parameters()) > 0:
-            spark_submit_parameters = self.dp.spark_submit_parameters().strip()
+        spark_submit_parameters = self.dp.spark_submit_parameters().params_for(
+            "emr_serverless"
+        )
 
         if spark_submit_opts:
             spark_submit_parameters += f" {spark_submit_opts}".strip()

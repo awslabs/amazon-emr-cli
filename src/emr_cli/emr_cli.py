@@ -1,5 +1,6 @@
 import click
 from emr_cli.config import ConfigReader, ConfigWriter
+from emr_cli.deployments.emr_ec2 import EMREC2
 from emr_cli.packaging.detector import ProjectDetector
 
 from .deployments.emr_serverless import Bootstrap, EMRServerless
@@ -122,7 +123,8 @@ def deploy(project, entry_point, s3_code_uri):
 
 
 @click.command()
-@click.option("--application-id", help="EMR Serverless Application ID", required=True)
+@click.option("--application-id", help="EMR Serverless Application ID")
+@click.option("--cluster-id", help="EMR on EC2 Cluster ID")
 @click.option(
     "--entry-point",
     type=click.Path(exists=True, dir_okay=False, allow_dash=False),
@@ -152,6 +154,7 @@ def deploy(project, entry_point, s3_code_uri):
 def run(
     project,
     application_id,
+    cluster_id,
     entry_point,
     job_role,
     wait,
@@ -161,6 +164,12 @@ def run(
     spark_submit_opts,
     build,
 ):
+    # Either a cluster or applciation ID must be specified
+    if cluster_id is None and application_id is None:
+        raise click.BadArgumentUsage(
+            "Either --application-id or --cluster-id must be specified."
+        )
+        
     # We require entry-point and s3-code-uri
     if entry_point is None or s3_code_uri is None:
         raise click.BadArgumentUsage(
@@ -172,6 +181,7 @@ def run(
         p.build()
         p.deploy(s3_code_uri)
 
+    # application_id indicates EMR Serverless job
     if application_id is not None:
         # We require entry-point and job-role
         if entry_point is None or job_role is None:
@@ -183,6 +193,13 @@ def run(
             job_args = job_args.split(",")
         emrs = EMRServerless(application_id, job_role, p)
         emrs.run_job(job_name, job_args, spark_submit_opts, wait)
+
+    # cluster_id indicates EMR on EC2 job
+    if cluster_id is not None:
+        if job_args:
+            job_args = job_args.split(",")
+        emr = EMREC2(cluster_id, p)
+        emr.run_job(job_name, job_args, wait)
 
 
 cli.add_command(package)

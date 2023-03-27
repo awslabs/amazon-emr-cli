@@ -3,6 +3,7 @@ import zipfile
 
 import boto3
 
+from emr_cli.deployments import SparkParams
 from emr_cli.deployments.emr_serverless import DeploymentPackage
 from emr_cli.utils import console_log, find_files, mkdir, parse_bucket_uri
 
@@ -45,6 +46,10 @@ class PythonFilesProject(DeploymentPackage):
 
         return f"s3://{bucket}/{prefix}/{filename}"
 
-    def spark_submit_parameters(self) -> str:
+    def spark_submit_parameters(self) -> SparkParams:
         zip_path = os.path.join(self.s3_uri_base, "pyfiles.zip")
-        return f"--conf spark.submit.pyFiles={zip_path}"
+        return SparkParams(
+            common_params={
+                "spark.submit.pyFiles": zip_path,
+            },
+        )
