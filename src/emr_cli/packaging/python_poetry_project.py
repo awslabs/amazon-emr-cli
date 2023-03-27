@@ -36,7 +36,8 @@ class PythonPoetryProject(DeploymentPackage):
 
     def _run_local_build(self, output_dir: str = "dist"):
         subprocess.run(
-            ["poetry", "bundle", "venv" "poeticemrbundle" "--without" "dev"], check=True
+            ["poetry", "bundle", "venv", "poeticemrbundle", "--without", "dev"],
+            check=True
         )
 
     def _run_docker_build(self, output_dir: str):

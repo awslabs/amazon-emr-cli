@@ -29,7 +29,7 @@ class EMREC2:
                 JobFlowId=self.cluster_id,
                 Steps=[
                     {
-                        "Name": "emr-cli job",
+                        "Name": job_name,
                         "ActionOnFailure": "CONTINUE",
                         "HadoopJarStep": {
                             "Jar": "command-runner.jar",
