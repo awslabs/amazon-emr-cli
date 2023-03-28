@@ -46,8 +46,10 @@ and access to read and create tables in the Glue Data Catalog.""",
 )
 def bootstrap(target, code_bucket, logs_bucket, job_role_name, destroy):
     """
-    Bootstraps your EMR environment of choice, including creating an S3 bucket,
-    tightly-scoped job roles, and relevant location emr cli configuration.
+    Bootstrap an EMR Serverless environment.
+
+    Includes creating an S3 bucket, tightly-scoped job roles,
+    EMR Serverless application, and emr cli configuration file.
     """
     if destroy:
         c = ConfigReader.read()
@@ -106,7 +108,7 @@ def init(path, dockerfile, project_type):
 @click.pass_obj
 def package(project, entry_point):
     """
-    Package a local PySpark project into dist/
+    Package a project and dependencies into dist/
     """
     p = project(entry_point)
     p.build()
