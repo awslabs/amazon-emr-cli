@@ -10,6 +10,9 @@ from .packaging.python_project import PythonProject
 @click.group()
 @click.pass_context
 def cli(ctx):
+    """
+    Package, deploy, and run PySpark projects on EMR.
+    """
     # If we want the user to be able to force a project type, check out click.Choice
     ctx.obj = ProjectDetector().detect()
 
@@ -82,12 +85,14 @@ def bootstrap(target, code_bucket, logs_bucket, job_role_name, destroy):
     default="python",
 )
 def init(path, dockerfile, project_type):
+    """
+    Initialize a local PySpark project.
+    """
     if dockerfile:
         click.echo("Creating sample Dockerfile...")
         PythonProject().copy_single_file("Dockerfile")
     else:
         kls = ProjectDetector().detect(project_type)
-        click.echo("Initializing project")
         kls().initialize(path)
 
 
@@ -100,6 +105,9 @@ def init(path, dockerfile, project_type):
 )
 @click.pass_obj
 def package(project, entry_point):
+    """
+    Package a local PySpark project into dist/
+    """
     p = project(entry_point)
     p.build()
 
@@ -118,6 +126,9 @@ def package(project, entry_point):
 )
 @click.pass_obj
 def deploy(project, entry_point, s3_code_uri):
+    """
+    Copy a local project to S3.
+    """
     p = project(entry_point)
     p.deploy(s3_code_uri)
 
@@ -164,6 +175,9 @@ def run(
     spark_submit_opts,
     build,
 ):
+    """
+    Run a project on EMR, optionally build and deploy
+    """
     # Either a cluster or applciation ID must be specified
     if cluster_id is None and application_id is None:
         raise click.BadArgumentUsage(
