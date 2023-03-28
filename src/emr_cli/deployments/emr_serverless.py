@@ -234,7 +234,9 @@ class EMRServerless:
         )
 
         if spark_submit_opts:
-            spark_submit_parameters += f" {spark_submit_opts}".strip()
+            spark_submit_parameters = (
+                f"{spark_submit_parameters} {spark_submit_opts}".strip()
+            )
 
         if spark_submit_parameters:
             jobDriver["sparkSubmit"]["sparkSubmitParameters"] = spark_submit_parameters
