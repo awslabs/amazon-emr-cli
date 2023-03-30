@@ -9,7 +9,7 @@ import boto3
 
 from emr_cli.deployments import SparkParams
 from emr_cli.deployments.emr_serverless import DeploymentPackage
-from emr_cli.utils import console_log, copy_template
+from emr_cli.utils import console_log, copy_template, validate_build_target
 
 
 class PythonPoetryProject(DeploymentPackage):
@@ -41,6 +41,7 @@ class PythonPoetryProject(DeploymentPackage):
         )
 
     def _run_docker_build(self, output_dir: str):
+        validate_build_target("export-poetry")
         subprocess.run(
             [
                 "docker",

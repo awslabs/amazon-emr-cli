@@ -8,7 +8,7 @@ import boto3
 
 from emr_cli.deployments import SparkParams
 from emr_cli.deployments.emr_serverless import DeploymentPackage
-from emr_cli.utils import console_log, copy_template, parse_bucket_uri
+from emr_cli.utils import console_log, copy_template, parse_bucket_uri, validate_build_target
 
 
 class PythonProject(DeploymentPackage):
@@ -50,8 +50,17 @@ class PythonProject(DeploymentPackage):
         self._run_docker_build(self.dist_dir)
 
     def _run_docker_build(self, output_dir: str):
+        validate_build_target("export-python")
         subprocess.run(
-            ["docker", "build", "--output", output_dir, "."],
+            [
+                "docker",
+                "build",
+                "--target",
+                "export-python",
+                "--output",
+                output_dir,
+                ".",
+            ],
             check=True,
             env=dict(os.environ, DOCKER_BUILDKIT="1"),
         )

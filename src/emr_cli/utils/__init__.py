@@ -1,5 +1,7 @@
 import os
+import re
 import sys
+from calendar import c
 from pathlib import Path
 from shutil import copyfile, copytree, ignore_patterns
 from typing import List
@@ -65,3 +67,24 @@ def py37_copytree(src, dest, ignore=None):
                 py37_copytree(os.path.join(src, f), os.path.join(dest, f), ignore)
     else:
         copyfile(src, dest)
+
+
+def validate_build_target(name: str) -> bool:
+    """
+    Grep the local Dockerfile for the desired target, raise an exception if it's not found
+    """
+    r = None
+    search_term = f"FROM .* AS {name}$"
+    with open("Dockerfile", "r") as file:
+        for line in file:
+            r = re.search(search_term, line)
+            if r:
+                return True
+    if not r:
+        console_log(f"ERR: Target `{name}` not found in Dockerfile.")
+        console_log(
+            "ERR: Try creating a new dockerfile with the `emr init --dockerfile .` command."
+        )
+        sys.exit(1)
+
+    return False

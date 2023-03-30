@@ -2,6 +2,7 @@ import click
 from emr_cli.config import ConfigReader, ConfigWriter
 from emr_cli.deployments.emr_ec2 import EMREC2
 from emr_cli.packaging.detector import ProjectDetector
+from emr_cli.utils import console_log
 
 from .deployments.emr_serverless import Bootstrap, EMRServerless
 from .packaging.python_project import PythonProject
@@ -18,6 +19,13 @@ def cli(ctx):
 
     # If a config file exists, set those as defaults for all other options
     ctx.default_map = ConfigReader.read()
+
+
+@click.command()
+@click.pass_obj
+def status(project):
+    console_log("")
+    print("Project type:\t", project.__name__)
 
 
 @click.command()
@@ -223,6 +231,7 @@ cli.add_command(deploy)
 cli.add_command(run)
 cli.add_command(init)
 cli.add_command(bootstrap)
+cli.add_command(status)
 
 if __name__ == "__main__":
     cli()
