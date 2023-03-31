@@ -77,7 +77,7 @@ def validate_build_target(name: str) -> bool:
     search_term = f"FROM .* AS {name}$"
     with open("Dockerfile", "r") as file:
         for line in file:
-            r = re.search(search_term, line)
+            r = re.search(search_term, line, flags=re.IGNORECASE)
             if r:
                 return True
     if not r:
