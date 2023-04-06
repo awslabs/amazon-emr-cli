@@ -1,3 +1,4 @@
+from sys import is_finalizing
 import click
 from emr_cli.config import ConfigReader, ConfigWriter
 from emr_cli.deployments.emr_ec2 import EMREC2
@@ -171,6 +172,12 @@ def deploy(project, entry_point, s3_code_uri):
     default=False,
     is_flag=True,
 )
+@click.option(
+    "--show-stdout",
+    help="Show the stdout of the job after it's finished",
+    default=False,
+    is_flag=True,
+)
 @click.pass_obj
 def run(
     project,
@@ -184,6 +191,7 @@ def run(
     job_args,
     spark_submit_opts,
     build,
+    show_stdout,
 ):
     """
     Run a project on EMR, optionally build and deploy
@@ -216,14 +224,14 @@ def run(
         if job_args:
             job_args = job_args.split(",")
         emrs = EMRServerless(application_id, job_role, p)
-        emrs.run_job(job_name, job_args, spark_submit_opts, wait)
+        emrs.run_job(job_name, job_args, spark_submit_opts, wait, show_stdout)
 
     # cluster_id indicates EMR on EC2 job
     if cluster_id is not None:
         if job_args:
             job_args = job_args.split(",")
         emr = EMREC2(cluster_id, p)
-        emr.run_job(job_name, job_args, wait)
+        emr.run_job(job_name, job_args, wait, show_stdout)
 
 
 cli.add_command(package)
