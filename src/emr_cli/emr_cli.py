@@ -153,7 +153,7 @@ def deploy(project, entry_point, s3_code_uri):
 )
 @click.option("--job-role", help="IAM Role ARN to use for the job execution")
 @click.option("--wait", default=False, is_flag=True, help="Wait for job to finish")
-@click.option("--s3-code-uri", help="Where to copy code artifacts to")
+@click.option("--s3-code-uri", help="Where to copy/run code artifacts to/from")
 @click.option("--job-name", help="The name of the job", default="emr-cli job")
 @click.option(
     "--job-args",
@@ -167,7 +167,7 @@ def deploy(project, entry_point, s3_code_uri):
 )
 @click.option(
     "--build",
-    help="Do not package and deploy the job assets",
+    help="Package and deploy job artifacts",
     default=False,
     is_flag=True,
 )
