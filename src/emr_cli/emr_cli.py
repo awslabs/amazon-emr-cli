@@ -1,3 +1,4 @@
+from sys import is_finalizing
 import click
 from emr_cli.config import ConfigReader, ConfigWriter
 from emr_cli.deployments.emr_ec2 import EMREC2
@@ -153,7 +154,7 @@ def deploy(project, entry_point, s3_code_uri):
 )
 @click.option("--job-role", help="IAM Role ARN to use for the job execution")
 @click.option("--wait", default=False, is_flag=True, help="Wait for job to finish")
-@click.option("--s3-code-uri", help="Where to copy code artifacts to")
+@click.option("--s3-code-uri", help="Where to copy/run code artifacts to/from")
 @click.option("--job-name", help="The name of the job", default="emr-cli job")
 @click.option(
     "--job-args",
@@ -167,7 +168,13 @@ def deploy(project, entry_point, s3_code_uri):
 )
 @click.option(
     "--build",
-    help="Do not package and deploy the job assets",
+    help="Package and deploy job artifacts",
+    default=False,
+    is_flag=True,
+)
+@click.option(
+    "--show-stdout",
+    help="Show the stdout of the job after it's finished",
     default=False,
     is_flag=True,
 )
@@ -184,6 +191,7 @@ def run(
     job_args,
     spark_submit_opts,
     build,
+    show_stdout,
 ):
     """
     Run a project on EMR, optionally build and deploy
@@ -216,14 +224,14 @@ def run(
         if job_args:
             job_args = job_args.split(",")
         emrs = EMRServerless(application_id, job_role, p)
-        emrs.run_job(job_name, job_args, spark_submit_opts, wait)
+        emrs.run_job(job_name, job_args, spark_submit_opts, wait, show_stdout)
 
     # cluster_id indicates EMR on EC2 job
     if cluster_id is not None:
         if job_args:
             job_args = job_args.split(",")
         emr = EMREC2(cluster_id, p)
-        emr.run_job(job_name, job_args, wait)
+        emr.run_job(job_name, job_args, wait, show_stdout)
 
 
 cli.add_command(package)
