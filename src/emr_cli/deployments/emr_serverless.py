@@ -223,7 +223,15 @@ class EMRServerless:
         job_args: Optional[List[str]] = None,
         spark_submit_opts: Optional[str] = None,
         wait: bool = True,
+        show_logs: bool = False,
     ):
+        if show_logs:
+            raise RuntimeError(
+                "--show-stdout is not compatible with EMR Serverless (yet).\n"
+                + "Please 👍 this GitHub issue to voice your support: "
+                + "https://github.com/awslabs/amazon-emr-cli/issues/11"
+            )
+
         jobDriver = {
             "sparkSubmit": {
                 "entryPoint": self.dp.entrypoint_uri(),
