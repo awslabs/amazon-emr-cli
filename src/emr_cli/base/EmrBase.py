@@ -20,5 +20,8 @@ class EmrBase:
     aws_session = ""
 
     def __init__(self, profile):
-
-        self.aws_session = boto3.session.Session(profile_name=profile)
+        
+        if profile:
+            self.aws_session = boto3.session.Session(profile_name=profile)
+        else:
+            self.aws_session = boto3.session.Session()
