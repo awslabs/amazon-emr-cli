@@ -5,12 +5,12 @@ import sys
 import zipfile
 from time import sleep
 from typing import List, Optional
-from emr_cli.base.EmrBase import EmrBase
 
 import boto3
 
 from emr_cli.deployments import SparkParams
 from emr_cli.utils import console_log, find_files, mkdir
+from emr_cli.base.EmrBase import EmrBase
 
 
 class DeploymentPackage(metaclass=abc.ABCMeta):

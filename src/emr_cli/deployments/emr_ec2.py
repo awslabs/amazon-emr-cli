@@ -7,18 +7,31 @@ import boto3
 from botocore.exceptions import ClientError, WaiterError
 from emr_cli.deployments.emr_serverless import DeploymentPackage
 from emr_cli.utils import console_log, parse_bucket_uri
+from emr_cli.base.EmrBase import EmrBase
 
 LOG_WAITER_DELAY_SEC = 30
 
 
-class EMREC2:
+class EMREC2 (EmrBase):
     def __init__(
-        self, cluster_id: str, deployment_package: DeploymentPackage, region: str = ""
+        self, cluster_id: str, deployment_package: DeploymentPackage, region: str = "", profile: str = ""
     ) -> None:
+        
+        super().__init__(profile)
+        
+        aws_session = self.aws_session
+
+        if region:
+            self.client = aws_session.client("emr", region_name=region)
+        else:
+            # Note that boto3 uses AWS_DEFAULT_REGION, not AWS_REGION
+            # We may want to add an extra check here for the latter.
+            self.client = aws_session.client("emr")
+
         self.cluster_id = cluster_id
         self.dp = deployment_package
-        self.client = boto3.client("emr")
-        self.s3_client = boto3.client("s3")
+        
+        self.s3_client = aws_session.client("s3")
 
     def run_job(
         self,
