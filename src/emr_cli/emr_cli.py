@@ -4,6 +4,7 @@ from emr_cli.config import ConfigReader, ConfigWriter
 from emr_cli.deployments.emr_ec2 import EMREC2
 from emr_cli.packaging.detector import ProjectDetector
 from emr_cli.utils import console_log
+from .deployments.emr_local_dev import EMRLocalDev
 
 from .deployments.emr_serverless import Bootstrap, EMRServerless
 from .packaging.python_project import PythonProject
@@ -242,12 +243,36 @@ def run(
         emr.run_job(job_name, job_args, wait, show_stdout)
 
 
+@click.command()
+@click.option(
+    "--container-name",
+    required=True,
+    help="The container name built by Docker",
+)
+@click.option(
+    "--spark-ui-port",
+    help="The port to map for spark ui",
+    default=4141,
+)
+@click.option(
+    "--jupyter-port",
+    help="The port to map for jupyter",
+    default=8787,
+)
+def start_local_dev(container_name):
+    """
+    Start a container with Jupyter notebook and Amazon EMR runtime
+    """
+    EMRLocalDev.start_local_dev(container_name=container_name)
+
+
 cli.add_command(package)
 cli.add_command(deploy)
 cli.add_command(run)
 cli.add_command(init)
 cli.add_command(bootstrap)
 cli.add_command(status)
+cli.add_command(start_local_dev)
 
 if __name__ == "__main__":
     cli()
