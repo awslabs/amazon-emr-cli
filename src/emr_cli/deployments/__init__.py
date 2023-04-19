@@ -7,7 +7,7 @@ class SparkParams:
     Spark `--conf` parameters based on the environment being deployed to.
     """
 
-    SUPPORTED_ENVIRONMENTS = ["emr_serverless", "emr_ec2"]
+    SUPPORTED_ENVIRONMENTS = ["emr_serverless", "emr_ec2", "emr_on_eks"]
 
     def __init__(
         self,
