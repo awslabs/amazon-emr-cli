@@ -264,8 +264,6 @@ def start_local_dev(container_name, spark_ui_port, jupyter_port):
     Start a container with Jupyter notebook and Amazon EMR runtime
     """
     
-    print(spark_ui_port)
-    print(jupyter_port)
     EMRLocalDev.start_local_dev(container_name=container_name, 
                                 spark_ui_port=spark_ui_port,
                                 jupyter_port=jupyter_port
