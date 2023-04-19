@@ -6,17 +6,14 @@ class EMRLocalDev ():
     
     def start_local_dev(
         container_name: str,
-        spark_ui_port: int = None,
-        jupyter_port: int = None
+        spark_ui_port: int,
+        jupyter_port: int
     ) :
     
         client = docker.from_env()
     
         #TODO
         #add volume mount option
-
-        jupyter_port = jupyter_port if jupyter_port else 8787
-        spark_ui_port = spark_ui_port if spark_ui_port else 4141
 
         container = client.containers.run(container_name, ports={'4040/tcp': spark_ui_port, '8888/tcp': jupyter_port}, detach=True)
 

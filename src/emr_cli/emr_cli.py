@@ -247,23 +247,29 @@ def run(
 @click.option(
     "--container-name",
     required=True,
-    help="The container name built by Docker",
+    help="The container name built by Docker"
 )
 @click.option(
     "--spark-ui-port",
     help="The port to map for spark ui",
-    default=4141,
+    default=4141
 )
 @click.option(
     "--jupyter-port",
     help="The port to map for jupyter",
-    default=8787,
+    default=8787
 )
-def start_local_dev(container_name):
+def start_local_dev(container_name, spark_ui_port, jupyter_port):
     """
     Start a container with Jupyter notebook and Amazon EMR runtime
     """
-    EMRLocalDev.start_local_dev(container_name=container_name)
+    
+    print(spark_ui_port)
+    print(jupyter_port)
+    EMRLocalDev.start_local_dev(container_name=container_name, 
+                                spark_ui_port=spark_ui_port,
+                                jupyter_port=jupyter_port
+                                )
 
 
 cli.add_command(package)
