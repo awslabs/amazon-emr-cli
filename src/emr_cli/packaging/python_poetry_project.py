@@ -14,12 +14,6 @@ from emr_cli.utils import console_log, copy_template, validate_build_target
 
 class PythonPoetryProject(DeploymentPackage):
 
-     
-    def __init__(self, profile: str = None):
-        super().__init__(profile)
-
-        self.s3_client = self.aws_session.client("s3")
-
     def initialize(self, target_dir: str = os.getcwd()):
         """
         Initializes a poetry-based pyspark project in the provided directory.
@@ -74,7 +68,7 @@ class PythonPoetryProject(DeploymentPackage):
         )
         return os.path.join(templates, "Dockerfile")
 
-    def deploy(self, s3_code_uri: str) -> str:
+    def deploy(self, s3_code_uri: str, profile: str = None) -> str:
         """
         Copies local code to S3 and returns the path to the uploaded entrypoint
         """
@@ -83,7 +77,16 @@ class PythonPoetryProject(DeploymentPackage):
 
         console_log(f"Deploying {filename} and dependencies to {s3_code_uri}")
 
-        self.s3_client.upload_file(
+        aws_session = ""
+
+        if profile:
+            aws_session = boto3.session.Session(profile_name=profile)
+        else:
+            aws_session = boto3.session.Session()
+        
+        s3_client = aws_session.client("s3")
+
+        s3_client.upload_file(
             self.entry_point_path, bucket, os.path.join(prefix, filename)
         )
         self.s3_client.upload_file(

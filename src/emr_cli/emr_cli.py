@@ -148,8 +148,8 @@ def deploy(project, entry_point, s3_code_uri, profile):
     """
     Copy a local project to S3.
     """
-    p = project(entry_point, profile)
-    p.deploy(s3_code_uri)
+    p = project(entry_point)
+    p.deploy(s3_code_uri, profile)
 
 
 @click.command()

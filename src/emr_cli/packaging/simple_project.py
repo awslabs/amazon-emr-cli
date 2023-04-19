@@ -21,7 +21,7 @@ class SimpleProject(DeploymentPackage):
     def build(self):
         pass
 
-    def deploy(self, s3_code_uri: str) -> str:
+    def deploy(self, s3_code_uri: str, profile: str = None) -> str:
         """
         Copies local code to S3 and returns the path to the uploaded entrypoint
         """
@@ -31,6 +31,15 @@ class SimpleProject(DeploymentPackage):
 
         console_log(f"Deploying {filename} to {s3_code_uri}")
 
-        self.s3_client.upload_file(self.entry_point_path, bucket, f"{prefix}/{filename}")
+        aws_session = ""
+
+        if profile:
+            aws_session = boto3.session.Session(profile_name=profile)
+        else:
+            aws_session = boto3.session.Session()
+        
+        s3_client = aws_session.client("s3")
+
+        s3_client.upload_file(self.entry_point_path, bucket, f"{prefix}/{filename}")
 
         return f"s3://{bucket}/{prefix}/{filename}"
