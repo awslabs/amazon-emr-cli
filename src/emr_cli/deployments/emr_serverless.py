@@ -5,6 +5,7 @@ import sys
 import zipfile
 from time import sleep
 from typing import List, Optional
+from emr_cli.base.EmrBase import EmrBase
 
 import boto3
 
@@ -50,17 +51,21 @@ class DeploymentPackage(metaclass=abc.ABCMeta):
                 zf.write(file, relpath)
 
 
-class Bootstrap:
+class Bootstrap (EmrBase):
     DEFAULT_S3_POLICY_NAME = "emr-cli-S3Access"
     DEFAULT_GLUE_POLICY_NAME = "emr-cli-GlueAccess"
 
-    def __init__(self, code_bucket: str, log_bucket: str, job_role_name: str):
+    def __init__(self, profile: str, code_bucket: str, log_bucket: str, job_role_name: str):
+        super().__init__(profile)
+
+        aws_session = self.aws_session
+
         self.code_bucket = code_bucket
         self.log_bucket = log_bucket or code_bucket
         self.job_role_name = job_role_name
-        self.s3_client = boto3.client("s3")
-        self.iam_client = boto3.client("iam")
-        self.emrs_client = boto3.client("emr-serverless")
+        self.s3_client = aws_session.client("s3")
+        self.iam_client = aws_session.client("iam")
+        self.emrs_client = aws_session.client("emr-serverless")
 
     def create_environment(self):
         self._create_s3_buckets()
@@ -91,7 +96,8 @@ class Bootstrap:
         Creates both the source and log buckets if they don't already exist.
         """
         for bucket_name in set([self.code_bucket, self.log_bucket]):
-            self.s3_client.create_bucket(Bucket=bucket_name)
+
+            self.s3_client.create_bucket(Bucket=bucket_name, CreateBucketConfiguration= {'LocationConstraint': self.aws_session.region_name})
             console_log(f"Created S3 bucket: s3://{bucket_name}")
 
     def _create_job_role(self):
@@ -199,23 +205,30 @@ class Bootstrap:
         return app_id
 
 
-class EMRServerless:
+class EMRServerless (EmrBase):
     def __init__(
         self,
         application_id: str,
         job_role: str,
         deployment_package: DeploymentPackage,
         region: str = "",
+        profile: str = ""
     ) -> None:
+        
+        super().__init__(profile)
+
         self.application_id = application_id
         self.job_role = job_role
         self.dp = deployment_package
+
+        aws_session = self.aws_session
+
         if region:
-            self.client = boto3.client("emr-serverless", region_name=region)
+            self.client = aws_session.client("emr-serverless", region_name=region)
         else:
             # Note that boto3 uses AWS_DEFAULT_REGION, not AWS_REGION
             # We may want to add an extra check here for the latter.
-            self.client = boto3.client("emr-serverless")
+            self.client = aws_session.client("emr-serverless")
 
     def run_job(
         self,

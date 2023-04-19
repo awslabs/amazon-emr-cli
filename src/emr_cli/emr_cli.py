@@ -4,6 +4,7 @@ from emr_cli.config import ConfigReader, ConfigWriter
 from emr_cli.deployments.emr_ec2 import EMREC2
 from emr_cli.packaging.detector import ProjectDetector
 from emr_cli.utils import console_log
+from .deployments.emr_local_dev import EMRLocalDev
 
 from .deployments.emr_serverless import Bootstrap, EMRServerless
 from .packaging.python_project import PythonProject
@@ -31,6 +32,10 @@ def status(project):
 
 @click.command()
 @click.option(
+    "--profile",
+    help="The AWS profile to use for bootstraping the environment.",
+)
+@click.option(
     "--target",
     type=click.Choice(["emr-serverless"]),
     help="Bootstrap a brand new environment.",
@@ -53,7 +58,7 @@ and access to read and create tables in the Glue Data Catalog.""",
     is_flag=True,
     help="Prints the commands necessary to destroy the created environment.",
 )
-def bootstrap(target, code_bucket, logs_bucket, job_role_name, destroy):
+def bootstrap(profile, target, code_bucket, logs_bucket, job_role_name, destroy):
     """
     Bootstrap an EMR Serverless environment.
 
@@ -62,12 +67,12 @@ def bootstrap(target, code_bucket, logs_bucket, job_role_name, destroy):
     """
     if destroy:
         c = ConfigReader.read()
-        b = Bootstrap(code_bucket, logs_bucket, job_role_name)
+        b = Bootstrap(profile, code_bucket, logs_bucket, job_role_name)
         b.print_destroy_commands(c.get("run", {}).get("application_id", None))
         exit(0)
 
     # For EMR Serverless, we need to create an S3 bucket, a job role, and an Application
-    b = Bootstrap(code_bucket, logs_bucket, job_role_name)
+    b = Bootstrap(profile, code_bucket, logs_bucket, job_role_name)
     config = b.create_environment()
 
     # The resulting config is relevant for the "run" command
@@ -145,6 +150,10 @@ def deploy(project, entry_point, s3_code_uri):
 
 
 @click.command()
+@click.option(
+    "--profile",
+    help="The AWS profile to use for bootstraping the environment.",
+)
 @click.option("--application-id", help="EMR Serverless Application ID")
 @click.option("--cluster-id", help="EMR on EC2 Cluster ID")
 @click.option(
@@ -234,12 +243,40 @@ def run(
         emr.run_job(job_name, job_args, wait, show_stdout)
 
 
+@click.command()
+@click.option(
+    "--container-name",
+    required=True,
+    help="The container name built by Docker"
+)
+@click.option(
+    "--spark-ui-port",
+    help="The port to map for spark ui",
+    default=4141
+)
+@click.option(
+    "--jupyter-port",
+    help="The port to map for jupyter",
+    default=8787
+)
+def start_local_dev(container_name, spark_ui_port, jupyter_port):
+    """
+    Start a container with Jupyter notebook and Amazon EMR runtime
+    """
+    
+    EMRLocalDev.start_local_dev(container_name=container_name, 
+                                spark_ui_port=spark_ui_port,
+                                jupyter_port=jupyter_port
+                                )
+
+
 cli.add_command(package)
 cli.add_command(deploy)
 cli.add_command(run)
 cli.add_command(init)
 cli.add_command(bootstrap)
 cli.add_command(status)
+cli.add_command(start_local_dev)
 
 if __name__ == "__main__":
     cli()
