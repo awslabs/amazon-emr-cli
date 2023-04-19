@@ -14,14 +14,22 @@ from emr_cli.base.EmrBase import EmrBase
 
 
 class DeploymentPackage(metaclass=abc.ABCMeta):
+
+    aws_session = ""
+
     def __init__(
-        self, entry_point_path: str = "entrypoint.py", s3_target_uri: str = ""
+        self, entry_point_path: str = "entrypoint.py", s3_target_uri: str = "", profile: str = None
     ) -> None:
         self.entry_point_path = entry_point_path
         self.dist_dir = "dist"
 
         # We might not populate this until we actually deploy
         self.s3_uri_base = s3_target_uri
+        
+        if profile:
+            self.aws_session = boto3.session.Session(profile_name=profile)
+        else:
+            self.aws_session = boto3.session.Session()
 
     def spark_submit_parameters(self) -> SparkParams:
         """

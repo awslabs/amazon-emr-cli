@@ -139,12 +139,16 @@ def package(project, entry_point):
     help="Where to copy code artifacts to",
     required=True,
 )
+@click.option(
+    "--profile",
+    help="The AWS profile to use to upload the package to S3 bucket",
+)
 @click.pass_obj
-def deploy(project, entry_point, s3_code_uri):
+def deploy(project, entry_point, s3_code_uri, profile):
     """
     Copy a local project to S3.
     """
-    p = project(entry_point)
+    p = project(entry_point, profile)
     p.deploy(s3_code_uri)
 
 

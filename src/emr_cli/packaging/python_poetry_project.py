@@ -13,6 +13,13 @@ from emr_cli.utils import console_log, copy_template, validate_build_target
 
 
 class PythonPoetryProject(DeploymentPackage):
+
+     
+    def __init__(self, profile: str = None):
+        super().__init__(profile)
+
+        self.s3_client = self.aws_session.client("s3")
+
     def initialize(self, target_dir: str = os.getcwd()):
         """
         Initializes a poetry-based pyspark project in the provided directory.
@@ -71,16 +78,15 @@ class PythonPoetryProject(DeploymentPackage):
         """
         Copies local code to S3 and returns the path to the uploaded entrypoint
         """
-        s3_client = boto3.client("s3")
         bucket, prefix = self._parse_bucket_uri(s3_code_uri)
         filename = os.path.basename(self.entry_point_path)
 
         console_log(f"Deploying {filename} and dependencies to {s3_code_uri}")
 
-        s3_client.upload_file(
+        self.s3_client.upload_file(
             self.entry_point_path, bucket, os.path.join(prefix, filename)
         )
-        s3_client.upload_file(
+        self.s3_client.upload_file(
             os.path.join(self.dist_dir, "pyspark_deps.tar.gz"),
             bucket,
             os.path.join(prefix, "pyspark_deps.tar.gz"),

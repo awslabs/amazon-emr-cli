@@ -12,6 +12,12 @@ from emr_cli.utils import console_log, copy_template, parse_bucket_uri, validate
 
 
 class PythonProject(DeploymentPackage):
+
+    def __init__(self, profile: str = None):
+        super().__init__(profile)
+
+        self.s3_client = self.aws_session.client("s3")
+
     def initialize(self, target_dir: str = os.getcwd()):
         """
         Initializes a pyspark project in the provided directory.
@@ -70,14 +76,14 @@ class PythonProject(DeploymentPackage):
         Copies local code to S3 and returns the path to the uploaded entrypoint
         """
         self.s3_uri_base = s3_code_uri
-        s3_client = boto3.client("s3")
+        
         bucket, prefix = parse_bucket_uri(self.s3_uri_base)
         filename = os.path.basename(self.entry_point_path)
 
         console_log(f"Deploying {filename} and dependencies to {self.s3_uri_base}")
 
-        s3_client.upload_file(self.entry_point_path, bucket, f"{prefix}/{filename}")
-        s3_client.upload_file(
+        self.s3_client.upload_file(self.entry_point_path, bucket, f"{prefix}/{filename}")
+        self.s3_client.upload_file(
             f"{self.dist_dir}/pyspark_deps.tar.gz",
             bucket,
             f"{prefix}/pyspark_deps.tar.gz",

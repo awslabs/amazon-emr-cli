@@ -9,6 +9,12 @@ from emr_cli.utils import console_log, find_files, mkdir, parse_bucket_uri
 
 
 class PythonFilesProject(DeploymentPackage):
+
+    def __init__(self, profile: str = None):
+        super().__init__(profile)
+
+        self.s3_client = self.aws_session.client("s3")
+
     """
     A PythonFilesProject is a simple project that includes multiple `.py` files.
 
@@ -33,14 +39,13 @@ class PythonFilesProject(DeploymentPackage):
         """
         Copies local code to S3 and returns the path to the uploaded entrypoint
         """
-        s3_client = boto3.client("s3")
         bucket, prefix = parse_bucket_uri(s3_code_uri)
         filename = os.path.basename(self.entry_point_path)
 
         console_log(f"Deploying {filename} and local python modules to {s3_code_uri}")
 
-        s3_client.upload_file(self.entry_point_path, bucket, f"{prefix}/{filename}")
-        s3_client.upload_file(
+        self.s3_client.upload_file(self.entry_point_path, bucket, f"{prefix}/{filename}")
+        self.s3_client.upload_file(
             f"{self.dist_dir}/pyfiles.zip", bucket, f"{prefix}/pyfiles.zip"
         )
 
