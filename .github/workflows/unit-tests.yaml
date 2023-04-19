@@ -1,5 +1,10 @@
 name: Spark Job Unit Tests
-on: [push]  
+on: [push]
+env:
+  AWS_DEFAULT_REGION: ${{ env.AWS_DEFAULT_REGION }}
+  AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+
 jobs:
   pytest:
     strategy:
@@ -47,6 +52,12 @@ jobs:
       name: Install project
       run: |
         poetry install --no-interaction
+    - 
+      name: create dumy credentials
+      uses: "finnp/create-file-action@master"
+      env:
+        FILE_NAME: "~/.aws/config"
+        FILE_BASE64: "W2RlZmF1bHRdDQpyZWdpb24gPSBldS13ZXN0LTE="
     - 
       name: Run tests
       run: |
