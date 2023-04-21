@@ -6,7 +6,7 @@ from typing import List, Optional
 import boto3
 from botocore.exceptions import ClientError, WaiterError
 from emr_cli.deployments.emr_serverless import DeploymentPackage
-from emr_cli.utils import console_log, parse_bucket_uri
+from emr_cli.utils import console_log, parse_bucket_uri, print_s3_gz
 
 LOG_WAITER_DELAY_SEC = 30
 
@@ -100,7 +100,7 @@ class EMREC2:
                 logs_location = self._fetch_log_location()
                 stdout_location = self._wait_for_logs(step_id, logs_location, 30 * 60)
                 console_log(f"stdout for {step_id}\n{'-'*36}")
-                self._print_logs(stdout_location)
+                print_s3_gz(self.s3_client, stdout_location)
                 if job_failed:
                     sys.exit(1)
             except RuntimeError as e:
@@ -140,12 +140,3 @@ class EMREC2:
             },
         )
         return object_name
-
-    def _print_logs(self, s3_uri: str):
-        """
-        Downloads and decompresses a gzip file from S3 and prints the logs to stdout.
-        """
-        bucket, key = parse_bucket_uri(s3_uri)
-        gz = self.s3_client.get_object(Bucket=bucket, Key=key)
-        with gzip.open(gz["Body"]) as data:
-            print(data.read().decode())

@@ -1,3 +1,4 @@
+import gzip
 import os
 import re
 import sys
@@ -6,6 +7,8 @@ from pathlib import Path
 from shutil import copyfile, copytree, ignore_patterns
 from typing import List
 from urllib.parse import urlparse
+
+import boto3
 
 
 def console_log(message):
@@ -88,3 +91,13 @@ def validate_build_target(name: str) -> bool:
         sys.exit(1)
 
     return False
+
+
+def print_s3_gz(client: boto3.session.Session.client, s3_uri: str):
+    """
+    Downloads and decompresses a gzip file from S3 and prints the logs to stdout.
+    """
+    bucket, key = parse_bucket_uri(s3_uri)
+    gz = client.get_object(Bucket=bucket, Key=key)
+    with gzip.open(gz["Body"]) as data:
+        print(data.read().decode())
