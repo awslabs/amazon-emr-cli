@@ -31,6 +31,10 @@ def status(project):
 
 @click.command()
 @click.option(
+    "--profile",
+    help="The AWS profile to use for bootstraping the environment.",
+)
+@click.option(
     "--target",
     type=click.Choice(["emr-serverless"]),
     help="Bootstrap a brand new environment.",
@@ -53,7 +57,7 @@ and access to read and create tables in the Glue Data Catalog.""",
     is_flag=True,
     help="Prints the commands necessary to destroy the created environment.",
 )
-def bootstrap(target, code_bucket, logs_bucket, job_role_name, destroy):
+def bootstrap(profile, target, code_bucket, logs_bucket, job_role_name, destroy):
     """
     Bootstrap an EMR Serverless environment.
 
@@ -62,12 +66,12 @@ def bootstrap(target, code_bucket, logs_bucket, job_role_name, destroy):
     """
     if destroy:
         c = ConfigReader.read()
-        b = Bootstrap(code_bucket, logs_bucket, job_role_name)
+        b = Bootstrap(profile, code_bucket, logs_bucket, job_role_name)
         b.print_destroy_commands(c.get("run", {}).get("application_id", None))
         exit(0)
 
     # For EMR Serverless, we need to create an S3 bucket, a job role, and an Application
-    b = Bootstrap(code_bucket, logs_bucket, job_role_name)
+    b = Bootstrap(profile, code_bucket, logs_bucket, job_role_name)
     config = b.create_environment()
 
     # The resulting config is relevant for the "run" command
@@ -135,13 +139,17 @@ def package(project, entry_point):
     help="Where to copy code artifacts to",
     required=True,
 )
+@click.option(
+    "--profile",
+    help="The AWS profile to use to upload the package to S3 bucket",
+)
 @click.pass_obj
-def deploy(project, entry_point, s3_code_uri):
+def deploy(project, entry_point, s3_code_uri, profile):
     """
     Copy a local project to S3.
     """
     p = project(entry_point)
-    p.deploy(s3_code_uri)
+    p.deploy(s3_code_uri, profile)
 
 
 @click.command()
@@ -178,6 +186,14 @@ def deploy(project, entry_point, s3_code_uri):
     default=False,
     is_flag=True,
 )
+@click.option(
+    "--profile",
+    help="The AWS profile to use for starting the job execution",
+)
+@click.option(
+    "--region",
+    help="The region of EMR Cluster or Serverless application where the job will be executed",
+)
 @click.pass_obj
 def run(
     project,
@@ -192,6 +208,8 @@ def run(
     spark_submit_opts,
     build,
     show_stdout,
+    profile,
+    region
 ):
     """
     Run a project on EMR, optionally build and deploy
@@ -211,7 +229,7 @@ def run(
 
     if build:
         p.build()
-        p.deploy(s3_code_uri)
+        p.deploy(s3_code_uri, profile)
 
     # application_id indicates EMR Serverless job
     if application_id is not None:
@@ -223,14 +241,14 @@ def run(
 
         if job_args:
             job_args = job_args.split(",")
-        emrs = EMRServerless(application_id, job_role, p)
+        emrs = EMRServerless(application_id, job_role, p, profile=profile, region=region)
         emrs.run_job(job_name, job_args, spark_submit_opts, wait, show_stdout)
 
     # cluster_id indicates EMR on EC2 job
     if cluster_id is not None:
         if job_args:
             job_args = job_args.split(",")
-        emr = EMREC2(cluster_id, p)
+        emr = EMREC2(cluster_id, p, profile=profile)
         emr.run_job(job_name, job_args, wait, show_stdout)
 
 
