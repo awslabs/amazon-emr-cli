@@ -14,12 +14,14 @@ LOG_WAITER_DELAY_SEC = 30
 
 class EMREC2 (EmrBase):
     def __init__(
-        self, cluster_id: str, deployment_package: DeploymentPackage, region: str = "", profile: str = None
+        self, cluster_id: str, deployment_package: DeploymentPackage, region: str = None, profile: str = None
     ) -> None:
         
         super().__init__(profile)
         
         aws_session = self.aws_session
+
+        self.client = ""
 
         if region:
             self.client = aws_session.client("emr", region_name=region)

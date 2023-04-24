@@ -214,8 +214,8 @@ class EMRServerless (EmrBase):
         application_id: str,
         job_role: str,
         deployment_package: DeploymentPackage,
-        region: str = "",
-        profile: str = ""
+        region: str = None,
+        profile: str = None
     ) -> None:
         
         super().__init__(profile)
@@ -225,6 +225,8 @@ class EMRServerless (EmrBase):
         self.dp = deployment_package
 
         aws_session = self.aws_session
+
+        self.client = ""
 
         if region:
             self.client = aws_session.client("emr-serverless", region_name=region)
