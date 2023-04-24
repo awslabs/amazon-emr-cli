@@ -1,6 +1,6 @@
 import boto3
 
-class EmrBase:
+class EMRBase:
 
     """
     Base class for defining authentication profile and any future common
