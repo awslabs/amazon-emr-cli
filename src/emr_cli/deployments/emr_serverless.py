@@ -10,7 +10,7 @@ import boto3
 
 from emr_cli.deployments import SparkParams
 from emr_cli.utils import console_log, find_files, mkdir
-from emr_cli.base.EmrBase import EmrBase
+from emr_cli.base.EmrBase import EMRBase
 
 
 class DeploymentPackage(metaclass=abc.ABCMeta):
@@ -54,7 +54,7 @@ class DeploymentPackage(metaclass=abc.ABCMeta):
                 zf.write(file, relpath)
 
 
-class Bootstrap (EmrBase):
+class Bootstrap(EMRBase):
     DEFAULT_S3_POLICY_NAME = "emr-cli-S3Access"
     DEFAULT_GLUE_POLICY_NAME = "emr-cli-GlueAccess"
 
@@ -208,7 +208,7 @@ class Bootstrap (EmrBase):
         return app_id
 
 
-class EMRServerless (EmrBase):
+class EMRServerless(EMRBase):
     def __init__(
         self,
         application_id: str,

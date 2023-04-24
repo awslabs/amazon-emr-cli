@@ -7,12 +7,12 @@ import boto3
 from botocore.exceptions import ClientError, WaiterError
 from emr_cli.deployments.emr_serverless import DeploymentPackage
 from emr_cli.utils import console_log, parse_bucket_uri
-from emr_cli.base.EmrBase import EmrBase
+from emr_cli.base.EmrBase import EMRBase
 
 LOG_WAITER_DELAY_SEC = 30
 
 
-class EMREC2 (EmrBase):
+class EMREC2(EMRBase):
     def __init__(
         self, cluster_id: str, deployment_package: DeploymentPackage, region: str = None, profile: str = None
     ) -> None:

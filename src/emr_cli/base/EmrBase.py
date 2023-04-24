@@ -1,4 +1,5 @@
-import boto3
+from boto3.session import Session
+
 
 class EMRBase:
 
@@ -12,16 +13,15 @@ class EMRBase:
 
     Attributes
     ----------
-    aws_session : the object return by for the session initialized 
+    aws_session : the object return by for the session initialized
                 using the profile passed through the extending class
-        
+
     """
 
     aws_session: Session
 
     def __init__(self, profile):
-        
         if profile:
-            self.aws_session = boto3.session.Session(profile_name=profile)
+            self.aws_session = Session(profile_name=profile)
         else:
-            self.aws_session = boto3.session.Session()
+            self.aws_session = Session()
