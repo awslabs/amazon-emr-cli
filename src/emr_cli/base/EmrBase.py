@@ -17,7 +17,7 @@ class EMRBase:
         
     """
 
-    aws_session = ""
+    aws_session: Session
 
     def __init__(self, profile):
         
