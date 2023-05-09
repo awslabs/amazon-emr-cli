@@ -155,6 +155,7 @@ def deploy(project, entry_point, s3_code_uri):
 @click.option("--job-role", help="IAM Role ARN to use for the job execution")
 @click.option("--wait", default=False, is_flag=True, help="Wait for job to finish")
 @click.option("--s3-code-uri", help="Where to copy/run code artifacts to/from")
+@click.option("--s3-logs-uri", help="Where to send EMR Serverless logs to")
 @click.option("--job-name", help="The name of the job", default="emr-cli job")
 @click.option(
     "--job-args",
@@ -187,6 +188,7 @@ def run(
     job_role,
     wait,
     s3_code_uri,
+    s3_logs_uri,
     job_name,
     job_args,
     spark_submit_opts,
@@ -224,7 +226,7 @@ def run(
         if job_args:
             job_args = job_args.split(",")
         emrs = EMRServerless(application_id, job_role, p)
-        emrs.run_job(job_name, job_args, spark_submit_opts, wait, show_stdout)
+        emrs.run_job(job_name, job_args, spark_submit_opts, wait, show_stdout, s3_logs_uri)
 
     # cluster_id indicates EMR on EC2 job
     if cluster_id is not None:

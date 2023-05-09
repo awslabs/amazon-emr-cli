@@ -3,13 +3,13 @@ import json
 import os
 import sys
 import zipfile
+from os.path import join
 from time import sleep
 from typing import List, Optional
 
 import boto3
-
 from emr_cli.deployments import SparkParams
-from emr_cli.utils import console_log, find_files, mkdir
+from emr_cli.utils import console_log, find_files, mkdir, print_s3_gz
 
 
 class DeploymentPackage(metaclass=abc.ABCMeta):
@@ -210,6 +210,7 @@ class EMRServerless:
         self.application_id = application_id
         self.job_role = job_role
         self.dp = deployment_package
+        self.s3_client = boto3.client("s3")
         if region:
             self.client = boto3.client("emr-serverless", region_name=region)
         else:
@@ -224,13 +225,10 @@ class EMRServerless:
         spark_submit_opts: Optional[str] = None,
         wait: bool = True,
         show_logs: bool = False,
+        s3_logs_uri: Optional[str] = None,
     ):
-        if show_logs:
-            raise RuntimeError(
-                "--show-stdout is not compatible with EMR Serverless (yet).\n"
-                + "Please 👍 this GitHub issue to voice your support: "
-                + "https://github.com/awslabs/amazon-emr-cli/issues/11"
-            )
+        if show_logs and not s3_logs_uri:
+            raise RuntimeError("--show-stdout requires --s3-logs-uri to be set.")
 
         jobDriver = {
             "sparkSubmit": {
@@ -252,29 +250,32 @@ class EMRServerless:
         if job_args:
             jobDriver["sparkSubmit"]["entryPointArguments"] = job_args  # type: ignore
 
+        config_overrides = {}
+        if s3_logs_uri:
+            config_overrides = {
+                "monitoringConfiguration": {
+                    "s3MonitoringConfiguration": {"logUri": s3_logs_uri}
+                }
+            }
+
         response = self.client.start_job_run(
             applicationId=self.application_id,
             executionRoleArn=self.job_role,
             name=job_name,
             jobDriver=jobDriver,
-            # configurationOverrides={
-            #     "monitoringConfiguration": {
-            #         "s3MonitoringConfiguration": {
-            #             "logUri": "s3://<BUCKET>/logs/"
-            #         }
-            #     }
-            # },
+            configurationOverrides=config_overrides,
         )
         job_run_id = response.get("jobRunId")
 
         console_log(f"Job submitted to EMR Serverless (Job Run ID: {job_run_id})")
-        if wait:
-            console_log("Waiting for job to complete...")
+        if not wait and not show_logs:
+            return job_run_id
 
+        console_log("Waiting for job to complete...")
         job_done = False
         job_state = "SUBMITTED"
         jr_response = {}
-        while wait and not job_done:
+        while not job_done:
             jr_response = self.get_job_run(job_run_id)
             new_state = jr_response.get("state")
             if new_state != job_state:
@@ -288,13 +289,23 @@ class EMRServerless:
             ]
             sleep(2)
 
-        if wait:
-            if jr_response.get("state") != "SUCCESS":
-                console_log(
-                    f"EMR Serverless job failed: {jr_response.get('stateDetails')}"
-                )
-                sys.exit(1)
-            console_log("Job completed successfully!")
+        if show_logs:
+            console_log(f"stdout for {job_run_id}\n{'-'*38}")
+            log_location = join(
+                f"{s3_logs_uri}",
+                "applications",
+                self.application_id,
+                "jobs",
+                job_run_id,
+                "SPARK_DRIVER",
+                "stdout.gz",
+            )
+            print_s3_gz(self.s3_client, log_location)
+
+        if jr_response.get("state") != "SUCCESS":
+            console_log(f"EMR Serverless job failed: {jr_response.get('stateDetails')}")
+            sys.exit(1)
+        console_log("Job completed successfully!")
 
         return job_run_id
 
