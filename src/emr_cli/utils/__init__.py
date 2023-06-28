@@ -2,7 +2,6 @@ import gzip
 import os
 import re
 import sys
-from calendar import c
 from pathlib import Path
 from shutil import copyfile, copytree, ignore_patterns
 from typing import List

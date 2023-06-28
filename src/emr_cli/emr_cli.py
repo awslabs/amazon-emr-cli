@@ -1,4 +1,3 @@
-from sys import is_finalizing
 import click
 from emr_cli.config import ConfigReader, ConfigWriter
 from emr_cli.deployments.emr_ec2 import EMREC2

@@ -1,4 +1,3 @@
-import gzip
 import sys
 from os.path import join
 from typing import List, Optional
@@ -40,13 +39,13 @@ class EMREC2:
         # --conf spark.archives is only compatible with cluster mode
         # So if we have both, we have to throw an error
         # See https://issues.apache.org/jira/browse/SPARK-36088
-        if (
+        if show_logs and (
             "--conf spark.archives" in spark_submit_params
             or "--archives" in spark_submit_params
         ):
             raise RuntimeError(
                 "--show-stdout is not compatible with projects that make use of "
-                + "--archives.\nPlease 👍 this GitHub issue to voice your support: "
+                + "dependencies.\nPlease 👍 this GitHub issue to voice your support: "
                 + "https://github.com/awslabs/amazon-emr-cli/issues/12"
             )
 
