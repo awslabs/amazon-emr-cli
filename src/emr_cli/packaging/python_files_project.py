@@ -2,10 +2,15 @@ import os
 import zipfile
 
 import boto3
-
 from emr_cli.deployments import SparkParams
 from emr_cli.deployments.emr_serverless import DeploymentPackage
-from emr_cli.utils import console_log, find_files, mkdir, parse_bucket_uri
+from emr_cli.utils import (
+    PrettyUploader,
+    console_log,
+    find_files,
+    mkdir,
+    parse_bucket_uri,
+)
 
 
 class PythonFilesProject(DeploymentPackage):
@@ -39,10 +44,17 @@ class PythonFilesProject(DeploymentPackage):
 
         console_log(f"Deploying {filename} and local python modules to {s3_code_uri}")
 
-        s3_client.upload_file(self.entry_point_path, bucket, f"{prefix}/{filename}")
-        s3_client.upload_file(
-            f"{self.dist_dir}/pyfiles.zip", bucket, f"{prefix}/pyfiles.zip"
+        uploader = PrettyUploader(
+            s3_client,
+            bucket,
+            {
+                self.entry_point_path: os.path.join(prefix, filename),
+                os.path.join(self.dist_dir, "pyfiles.zip"): os.path.join(
+                    prefix, "pyfiles.zip"
+                ),
+            },
         )
+        uploader.run()
 
         return f"s3://{bucket}/{prefix}/{filename}"
 

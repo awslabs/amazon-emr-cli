@@ -8,7 +8,13 @@ import boto3
 
 from emr_cli.deployments import SparkParams
 from emr_cli.deployments.emr_serverless import DeploymentPackage
-from emr_cli.utils import console_log, copy_template, parse_bucket_uri, validate_build_target
+from emr_cli.utils import (
+    PrettyUploader,
+    console_log,
+    copy_template,
+    parse_bucket_uri,
+    validate_build_target,
+)
 
 
 class PythonProject(DeploymentPackage):
@@ -76,12 +82,17 @@ class PythonProject(DeploymentPackage):
 
         console_log(f"Deploying {filename} and dependencies to {self.s3_uri_base}")
 
-        s3_client.upload_file(self.entry_point_path, bucket, f"{prefix}/{filename}")
-        s3_client.upload_file(
-            f"{self.dist_dir}/pyspark_deps.tar.gz",
+        uploader = PrettyUploader(
+            s3_client,
             bucket,
-            f"{prefix}/pyspark_deps.tar.gz",
+            {
+                self.entry_point_path: os.path.join(prefix, filename),
+                os.path.join(self.dist_dir, "pyspark_deps.tar.gz"): os.path.join(
+                    prefix, "pyspark_deps.tar.gz"
+                ),
+            },
         )
+        uploader.run()
 
         return f"s3://{bucket}/{prefix}/{filename}"
 
