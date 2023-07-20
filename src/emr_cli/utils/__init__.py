@@ -4,10 +4,11 @@ import re
 import sys
 from pathlib import Path
 from shutil import copyfile, copytree, ignore_patterns
-from typing import List
+from typing import Dict, List
 from urllib.parse import urlparse
 
 import boto3
+from rich.progress import Progress, TotalFileSizeColumn
 
 
 def console_log(message):
@@ -100,3 +101,31 @@ def print_s3_gz(client: boto3.session.Session.client, s3_uri: str):
     gz = client.get_object(Bucket=bucket, Key=key)
     with gzip.open(gz["Body"]) as data:
         print(data.read().decode())
+
+
+class PrettyUploader:
+    def __init__(
+        self,
+        s3_client: boto3.session.Session.client,
+        bucket: str,
+        src_target: Dict[str, str],
+    ):
+        self._s3_client = s3_client
+        self._bucket = bucket
+        self._src_target = src_target
+        self._totalsize = sum(
+            [float(os.path.getsize(filename)) for filename in self._src_target.keys()]
+        )
+        self._seensize = 0
+        self._progress = Progress(
+            *Progress.get_default_columns(), TotalFileSizeColumn()
+        )
+        self._task = self._progress.add_task("Uploading...", total=self._totalsize)
+
+    def run(self):
+        with self._progress:
+            for src, target in self._src_target.items():
+                self._s3_client.upload_file(src, self._bucket, target, Callback=self)
+
+    def __call__(self, bytes_amount):
+        self._progress.update(self._task, advance=bytes_amount)

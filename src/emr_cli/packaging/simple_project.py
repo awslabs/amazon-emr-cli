@@ -3,7 +3,7 @@ import os
 import boto3
 
 from emr_cli.deployments.emr_serverless import DeploymentPackage
-from emr_cli.utils import console_log, parse_bucket_uri
+from emr_cli.utils import PrettyUploader, console_log, parse_bucket_uri
 
 
 class SimpleProject(DeploymentPackage):
@@ -24,7 +24,13 @@ class SimpleProject(DeploymentPackage):
         filename = os.path.basename(self.entry_point_path)
 
         console_log(f"Deploying {filename} to {s3_code_uri}")
-
-        s3_client.upload_file(self.entry_point_path, bucket, f"{prefix}/{filename}")
+        uploader = PrettyUploader(
+            s3_client,
+            bucket,
+            {
+                self.entry_point_path: os.path.join(prefix, filename),
+            },
+        )
+        uploader.run()
 
         return f"s3://{bucket}/{prefix}/{filename}"

@@ -9,7 +9,12 @@ import boto3
 
 from emr_cli.deployments import SparkParams
 from emr_cli.deployments.emr_serverless import DeploymentPackage
-from emr_cli.utils import console_log, copy_template, validate_build_target
+from emr_cli.utils import (
+    PrettyUploader,
+    console_log,
+    copy_template,
+    validate_build_target,
+)
 
 
 class PythonPoetryProject(DeploymentPackage):
@@ -37,7 +42,7 @@ class PythonPoetryProject(DeploymentPackage):
     def _run_local_build(self, output_dir: str = "dist"):
         subprocess.run(
             ["poetry", "bundle", "venv", "poeticemrbundle", "--without", "dev"],
-            check=True
+            check=True,
         )
 
     def _run_docker_build(self, output_dir: str):
@@ -77,14 +82,17 @@ class PythonPoetryProject(DeploymentPackage):
 
         console_log(f"Deploying {filename} and dependencies to {s3_code_uri}")
 
-        s3_client.upload_file(
-            self.entry_point_path, bucket, os.path.join(prefix, filename)
-        )
-        s3_client.upload_file(
-            os.path.join(self.dist_dir, "pyspark_deps.tar.gz"),
+        uploader = PrettyUploader(
+            s3_client,
             bucket,
-            os.path.join(prefix, "pyspark_deps.tar.gz"),
+            {
+                self.entry_point_path: os.path.join(prefix, filename),
+                os.path.join(self.dist_dir, "pyspark_deps.tar.gz"): os.path.join(
+                    prefix, "pyspark_deps.tar.gz"
+                ),
+            },
         )
+        uploader.run()
 
         return f"s3://{bucket}/{prefix}/{filename}"
 
