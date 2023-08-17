@@ -231,7 +231,7 @@ def run(
     if cluster_id is not None:
         if job_args:
             job_args = job_args.split(",")
-        emr = EMREC2(cluster_id, p, job_role)
+        emr = EMREC2(cluster_id, job_role, p)
         emr.run_job(job_name, job_args, wait, show_stdout)
 
 

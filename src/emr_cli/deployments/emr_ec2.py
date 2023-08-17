@@ -12,7 +12,7 @@ LOG_WAITER_DELAY_SEC = 30
 
 class EMREC2:
     def __init__(
-        self, cluster_id: str, deployment_package: DeploymentPackage, job_role: str = None, region: str = ""
+        self, cluster_id: str, job_role: str, deployment_package: DeploymentPackage, region: str = ""
     ) -> None:
         self.cluster_id = cluster_id
         self.dp = deployment_package
