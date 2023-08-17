@@ -12,10 +12,11 @@ LOG_WAITER_DELAY_SEC = 30
 
 class EMREC2:
     def __init__(
-        self, cluster_id: str, deployment_package: DeploymentPackage, region: str = ""
+        self, cluster_id: str, job_role: str, deployment_package: DeploymentPackage, region: str = ""
     ) -> None:
         self.cluster_id = cluster_id
         self.dp = deployment_package
+        self.job_role = job_role
         self.client = boto3.client("emr")
         self.s3_client = boto3.client("s3")
 
@@ -49,26 +50,34 @@ class EMREC2:
                 + "https://github.com/awslabs/amazon-emr-cli/issues/12"
             )
 
+        # define params for emr.add_job_flow_steps
+        add_job_flow_steps_params = {
+            "JobFlowId": self.cluster_id,
+            "Steps": [
+                {
+                    "Name": job_name,
+                    "ActionOnFailure": "CONTINUE",
+                    "HadoopJarStep": {
+                        "Jar": "command-runner.jar",
+                        "Args": [
+                            "spark-submit",
+                            "--deploy-mode",
+                            deploy_mode,
+                        ]
+                        + spark_submit_params.split(" ")
+                        + [self.dp.entrypoint_uri()],
+                    },
+                }
+            ],
+        }
+
+        # conditionally add ExecutionRoleArn to add_job_flow_steps if a runtime role is requested for this step
+        # https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-steps-runtime-roles.html
+        if self.job_role:
+            add_job_flow_steps_params["ExecutionRoleArn"] = self.job_role
+
         try:
-            response = self.client.add_job_flow_steps(
-                JobFlowId=self.cluster_id,
-                Steps=[
-                    {
-                        "Name": job_name,
-                        "ActionOnFailure": "CONTINUE",
-                        "HadoopJarStep": {
-                            "Jar": "command-runner.jar",
-                            "Args": [
-                                "spark-submit",
-                                "--deploy-mode",
-                                deploy_mode,
-                            ]
-                            + spark_submit_params.split(" ")
-                            + [self.dp.entrypoint_uri()],
-                        },
-                    }
-                ],
-            )
+            response = self.client.add_job_flow_steps(**add_job_flow_steps_params)
         except ClientError as err:
             console_log(err)
             sys.exit(1)
