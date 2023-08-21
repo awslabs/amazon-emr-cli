@@ -1,10 +1,13 @@
 import click
+
 from emr_cli.config import ConfigReader, ConfigWriter
 from emr_cli.deployments.emr_ec2 import EMREC2
+from emr_cli.deployments.emr_ec2 import Bootstrap as BootstrapEMRonEC2
 from emr_cli.packaging.detector import ProjectDetector
 from emr_cli.utils import console_log
 
-from .deployments.emr_serverless import Bootstrap, EMRServerless
+from .deployments.emr_serverless import Bootstrap as BootstrapEMRServerless
+from .deployments.emr_serverless import EMRServerless
 from .packaging.python_project import PythonProject
 
 
@@ -31,13 +34,20 @@ def status(project):
 @click.command()
 @click.option(
     "--target",
-    type=click.Choice(["emr-serverless"]),
+    type=click.Choice(["emr-serverless", "emr-ec2"]),
     help="Bootstrap a brand new environment.",
 )
 @click.option(
     "--code-bucket", help="Bucket where source code will be uploaded", required=True
 )
 @click.option("--logs-bucket", help="Bucket where logs will be uploaded")
+@click.option(
+    "--instance-profile-name",
+    help="""
+The name of the IAM role to be created for your EMR on EC2 instances.
+""",
+    required=False,
+)
 @click.option(
     "--job-role-name",
     help="""
@@ -52,27 +62,41 @@ and access to read and create tables in the Glue Data Catalog.""",
     is_flag=True,
     help="Prints the commands necessary to destroy the created environment.",
 )
-def bootstrap(target, code_bucket, logs_bucket, job_role_name, destroy):
+def bootstrap(
+    target, code_bucket, logs_bucket, instance_profile_name, job_role_name, destroy
+):
     """
     Bootstrap an EMR Serverless environment.
 
     Includes creating an S3 bucket, tightly-scoped job roles,
     EMR Serverless application, and emr cli configuration file.
     """
+    # EMR on EC2 additionally needs an instance profile role
+    if target == "emr-ec2" and instance_profile_name is None:
+        raise click.BadArgumentUsage(
+            "EMR on EC2 clusters require --instance-profile-name to be set."
+        )
+
+    if target == "emr-serverless":
+        b = BootstrapEMRServerless(code_bucket, logs_bucket, job_role_name)
+    else:
+        b = BootstrapEMRonEC2(
+            code_bucket, logs_bucket, instance_profile_name, job_role_name
+        )
+
+    resource_id = "application_id" if target == "emr-serverless" else "cluster_id"
     if destroy:
         c = ConfigReader.read()
-        b = Bootstrap(code_bucket, logs_bucket, job_role_name)
-        b.print_destroy_commands(c.get("run", {}).get("application_id", None))
+        b.print_destroy_commands(c.get("run", {}).get(resource_id, None))
         exit(0)
 
     # For EMR Serverless, we need to create an S3 bucket, a job role, and an Application
-    b = Bootstrap(code_bucket, logs_bucket, job_role_name)
     config = b.create_environment()
 
     # The resulting config is relevant for the "run" command
     run_config = {
         "run": {
-            "application_id": config.get("application_id"),
+            resource_id: config.get(resource_id),
             "job_role": config.get("job_role_arn"),
             "s3_code_uri": f"s3://{config.get('code_bucket')}/code/pyspark/",
         }
@@ -202,7 +226,7 @@ def run(
         raise click.BadArgumentUsage(
             "Either --application-id or --cluster-id must be specified."
         )
-        
+
     # We require entry-point and s3-code-uri
     if entry_point is None or s3_code_uri is None:
         raise click.BadArgumentUsage(
@@ -225,7 +249,9 @@ def run(
         if job_args:
             job_args = job_args.split(",")
         emrs = EMRServerless(application_id, job_role, p)
-        emrs.run_job(job_name, job_args, spark_submit_opts, wait, show_stdout, s3_logs_uri)
+        emrs.run_job(
+            job_name, job_args, spark_submit_opts, wait, show_stdout, s3_logs_uri
+        )
 
     # cluster_id indicates EMR on EC2 job
     if cluster_id is not None:
@@ -243,4 +269,7 @@ cli.add_command(bootstrap)
 cli.add_command(status)
 
 if __name__ == "__main__":
+    cli()
+if __name__ == "__main__":
+    cli()
     cli()
