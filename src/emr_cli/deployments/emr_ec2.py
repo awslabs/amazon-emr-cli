@@ -63,6 +63,8 @@ class Bootstrap:
 
     def print_destroy_commands(self, cluster_id: str):
         # fmt: off
+        print(f"aws emr terminate-clusters --cluster-ids {cluster_id}")
+        print(f"aws emr wait cluster-terminated --cluster-id {cluster_id}")
         for bucket in set([self.log_bucket, self.code_bucket]):
             print(f"aws s3 rm s3://{bucket} --recursive")
             print(f"aws s3api delete-bucket --bucket {bucket}")
@@ -77,7 +79,6 @@ class Bootstrap:
                 print(f"aws iam delete-role-policy --role-name {role_name} --policy-name {name}")  # noqa E501
             print(f"aws iam delete-role --role-name {role_name}")
         print(f"aws emr delete-security-configuration --name emr-cli-runtime-roles")  # noqa E501
-        print(f"aws emr terminate-clusters --cluster-ids {cluster_id}")
         # fmt: on
 
     def _create_s3_buckets(self):
@@ -253,6 +254,7 @@ class Bootstrap:
         response = self.emr_client.run_job_flow(
             Name="emr-cli-demo",
             ReleaseLabel="emr-6.9.0",
+            LogUri=f"s3://{self.log_bucket}/logs/emr/",
             Applications=[
                 {"Name": "Spark"},
                 {"Name": "Livy"},
@@ -416,6 +418,7 @@ class EMREC2:
                 sys.exit(1)
             except WaiterError as e:
                 console_log(f"ERR: While waiting for logs to appear: {e}")
+                sys.exit(1)
 
         return step_id
 
