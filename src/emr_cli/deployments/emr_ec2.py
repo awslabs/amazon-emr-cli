@@ -448,4 +448,3 @@ class EMREC2:
             },
         )
         return object_name
-        return object_name
