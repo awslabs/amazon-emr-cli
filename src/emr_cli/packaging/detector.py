@@ -1,5 +1,6 @@
 import os
 from typing import Optional
+from emr_cli.deployments.emr_serverless import DeploymentPackage
 
 from emr_cli.packaging.python_files_project import PythonFilesProject
 from emr_cli.packaging.python_poetry_project import PythonPoetryProject
@@ -23,9 +24,11 @@ class ProjectDetector:
         "poetry": PythonPoetryProject,
     }
 
-    def detect(self, project_type: Optional[str] = None):
+    def detect(self, project_type: Optional[str] = None) -> DeploymentPackage.__class__:
         if project_type:
-            return self.PROJECT_TYPE_MAPPINGS.get(project_type)
+            if project_type not in self.PROJECT_TYPE_MAPPINGS:
+                raise ValueError(f"Unknown project type {project_type}")
+            return self.PROJECT_TYPE_MAPPINGS.get(project_type) # type: ignore
 
         # We default to a single file project - if the user has just a .py or .jar
         project = SimpleProject
