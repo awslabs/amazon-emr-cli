@@ -1,6 +1,6 @@
 import click
 
-from emr_cli.config import ConfigReader, ConfigWriter
+from emr_cli.config import DEFAULT_CONFIG_PATH, ConfigReader, ConfigWriter
 from emr_cli.deployments.emr_ec2 import EMREC2
 from emr_cli.deployments.emr_ec2 import Bootstrap as BootstrapEMRonEC2
 from emr_cli.packaging.detector import ProjectDetector
@@ -22,6 +22,8 @@ def cli(ctx):
 
     # If a config file exists, set those as defaults for all other options
     ctx.default_map = ConfigReader.read()
+    if ctx.default_map:
+        console_log(f"Using config file: {DEFAULT_CONFIG_PATH}")
 
 
 @click.command()
@@ -202,8 +204,11 @@ def deploy(project, entry_point, s3_code_uri):
     default=False,
     is_flag=True,
 )
+@click.option("--save-config", help="Update the config file with the provided options", is_flag=True)
 @click.pass_obj
+@click.pass_context
 def run(
+    ctx,
     project,
     application_id,
     cluster_id,
@@ -217,14 +222,21 @@ def run(
     spark_submit_opts,
     build,
     show_stdout,
+    save_config,
 ):
     """
     Run a project on EMR, optionally build and deploy
     """
-    # Either a cluster or applciation ID must be specified
+    # Either a cluster or application ID must be specified
     if cluster_id is None and application_id is None:
         raise click.BadArgumentUsage(
             "Either --application-id or --cluster-id must be specified."
+        )
+
+    # But not both :)
+    if cluster_id is not None and application_id is not None:
+        raise click.BadArgumentUsage(
+            "Only one of --application-id or --cluster-id can be specified"
         )
 
     # We require entry-point and s3-code-uri
@@ -233,6 +245,18 @@ def run(
             "--entry-point and --s3-code-uri are required if --build is used."
         )
     p = project(entry_point, s3_code_uri)
+
+    # Save the config if the user wants
+
+
+    # If the user passes --save-config, update our stored config file
+    if save_config:
+        run_config = {"run": ctx.__dict__.get("params")}
+        del run_config['run']['save_config']
+        ConfigWriter.write(run_config)
+        console_log(f"Config file saved to {DEFAULT_CONFIG_PATH}. Use `emr run` to re-use your configuration.")  # noqa: E501
+
+
 
     if build:
         p.build()
@@ -269,4 +293,4 @@ cli.add_command(bootstrap)
 cli.add_command(status)
 
 if __name__ == "__main__":
-    cli()
+    cli() # type: ignore

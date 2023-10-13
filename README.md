@@ -127,6 +127,25 @@ emr run --entry-point main.py \
 
 > **Note**: If the job fails, the command will exit with an error code.
 
+- Re-run your jobs with 7 characters.
+
+If you provide the `--save-config` command to `emr run`, it will save a configuration file for you in `.emr/config.yaml` and next time you can use `emr run` with no parameters to re-run your job.
+
+```bash
+emr run --entry-point main.py \
+    ... \
+    --save-config
+
+[emr-cli]: Config file saved to .emr/config.yaml. Use `emr run` to re-use your configuration.
+```
+
+```bash
+❯ emr run
+[emr-cli]: Using config file: .emr/config.yaml
+```
+
+🥳
+
 In the future, you'll also be able to do the following:
 
 - Utilize the same code against an EMR on EC2 cluster
