@@ -1,3 +1,5 @@
+import importlib.metadata
+
 import click
 
 from emr_cli.config import DEFAULT_CONFIG_PATH, ConfigReader, ConfigWriter
@@ -29,8 +31,11 @@ def cli(ctx):
 @click.command()
 @click.pass_obj
 def status(project):
+    __version__ = importlib.metadata.version('emr-cli')
     console_log("")
-    print("Project type:\t", project.__name__)
+    print("Project type:\t\t", project.__name__)
+    print("EMR CLI version:\t", __version__)
+    
 
 
 @click.command()
