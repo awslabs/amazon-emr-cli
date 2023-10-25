@@ -1,4 +1,9 @@
-import importlib.metadata
+try:
+    from importlib.metadata import version
+except ModuleNotFoundError:
+    # Python 3.7 compatibility
+    # https://github.com/python/importlib_metadata#compatibility-with-python-3.7
+    from importlib_metadata import version
 
 import click
 
@@ -31,11 +36,9 @@ def cli(ctx):
 @click.command()
 @click.pass_obj
 def status(project):
-    __version__ = importlib.metadata.version('emr-cli')
     console_log("")
-    print("Project type:\t\t", project.__name__)
-    print("EMR CLI version:\t", __version__)
-    
+    print(f"Project type:\t\t{ project.__name__}")
+    print(f"EMR CLI version:\t{version('emr-cli')}")
 
 
 @click.command()
@@ -209,7 +212,11 @@ def deploy(project, entry_point, s3_code_uri):
     default=False,
     is_flag=True,
 )
-@click.option("--save-config", help="Update the config file with the provided options", is_flag=True)
+@click.option(
+    "--save-config",
+    help="Update the config file with the provided options",
+    is_flag=True,
+)
 @click.pass_obj
 @click.pass_context
 def run(
@@ -253,15 +260,14 @@ def run(
 
     # Save the config if the user wants
 
-
     # If the user passes --save-config, update our stored config file
     if save_config:
         run_config = {"run": ctx.__dict__.get("params")}
-        del run_config['run']['save_config']
+        del run_config["run"]["save_config"]
         ConfigWriter.write(run_config)
-        console_log(f"Config file saved to {DEFAULT_CONFIG_PATH}. Use `emr run` to re-use your configuration.")  # noqa: E501
-
-
+        console_log(
+            f"Config file saved to {DEFAULT_CONFIG_PATH}. Use `emr run` to re-use your configuration."
+        )  # noqa: E501
 
     if build:
         p.build()
@@ -298,4 +304,4 @@ cli.add_command(bootstrap)
 cli.add_command(status)
 
 if __name__ == "__main__":
-    cli() # type: ignore
+    cli()  # type: ignore

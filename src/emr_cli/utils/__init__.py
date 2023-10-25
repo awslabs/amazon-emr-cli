@@ -4,11 +4,15 @@ import re
 import sys
 from pathlib import Path
 from shutil import copyfile, copytree, ignore_patterns
-from typing import Dict, List
+from typing import TYPE_CHECKING, Dict, List
 from urllib.parse import urlparse
 
-import boto3
 from rich.progress import Progress, TotalFileSizeColumn
+
+if TYPE_CHECKING:
+    from mypy_boto3_s3 import S3Client
+else:
+    S3Client = object
 
 
 def console_log(message):
@@ -93,7 +97,7 @@ def validate_build_target(name: str) -> bool:
     return False
 
 
-def print_s3_gz(client: boto3.session.Session.client, s3_uri: str):
+def print_s3_gz(client: S3Client, s3_uri: str):
     """
     Downloads and decompresses a gzip file from S3 and prints the logs to stdout.
     """
@@ -106,7 +110,7 @@ def print_s3_gz(client: boto3.session.Session.client, s3_uri: str):
 class PrettyUploader:
     def __init__(
         self,
-        s3_client: boto3.session.Session.client,
+        s3_client: S3Client,
         bucket: str,
         src_target: Dict[str, str],
     ):
