@@ -11,6 +11,8 @@ from rich.progress import Progress, TotalFileSizeColumn
 
 if TYPE_CHECKING:
     from mypy_boto3_s3 import S3Client
+else:
+    S3Client = object
 
 
 def console_log(message):
