@@ -8,6 +8,7 @@ from time import sleep
 from typing import List, Optional
 
 import boto3
+
 from emr_cli.deployments import SparkParams
 from emr_cli.utils import console_log, find_files, mkdir, print_s3_gz
 
@@ -92,8 +93,9 @@ class Bootstrap:
         """
         for bucket_name in set([self.code_bucket, self.log_bucket]):
             self.s3_client.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={
-                'LocationConstraint': self.s3_client.meta.region_name
+                'LocationConstraint': self.s3_client.meta.region_name # type: ignore
             })
+            
             console_log(f"Created S3 bucket: s3://{bucket_name}")
 
     def _create_job_role(self):
