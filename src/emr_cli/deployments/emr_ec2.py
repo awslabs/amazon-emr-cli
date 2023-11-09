@@ -1,4 +1,5 @@
 import json
+import shlex
 import sys
 import time
 from os.path import join
@@ -6,7 +7,6 @@ from typing import List, Optional
 
 import boto3
 from botocore.exceptions import ClientError, WaiterError
-
 from emr_cli.deployments.emr_serverless import DeploymentPackage
 from emr_cli.utils import console_log, parse_bucket_uri, print_s3_gz
 
@@ -88,9 +88,7 @@ class Bootstrap:
         for bucket_name in set([self.code_bucket, self.log_bucket]):
             self.s3_client.create_bucket(
                 Bucket=bucket_name,
-                CreateBucketConfiguration={
-                    "LocationConstraint": self.s3_client.meta.region_name
-                },
+                CreateBucketConfiguration={"LocationConstraint": self.s3_client.meta.region_name},
             )
             console_log(f"Created S3 bucket: s3://{bucket_name}")
 
@@ -118,9 +116,7 @@ class Bootstrap:
         role_arn = response.get("Role").get("Arn")
         console_log(f"Created IAM Role: {role_arn}")
 
-        self.iam_client.create_instance_profile(
-            InstanceProfileName=self.instance_role_name
-        )
+        self.iam_client.create_instance_profile(InstanceProfileName=self.instance_role_name)
         self.iam_client.add_role_to_instance_profile(
             InstanceProfileName=self.instance_role_name,
             RoleName=self.instance_role_name,
@@ -146,19 +142,13 @@ class Bootstrap:
         role_arn = response.get("Role").get("Arn")
         console_log(f"Created IAM Role: {role_arn}")
 
-        self.iam_client.attach_role_policy(
-            RoleName=self.job_role_name, PolicyArn=self._create_s3_policy()
-        )
-        self.iam_client.attach_role_policy(
-            RoleName=self.job_role_name, PolicyArn=self._create_glue_policy()
-        )
+        self.iam_client.attach_role_policy(RoleName=self.job_role_name, PolicyArn=self._create_s3_policy())
+        self.iam_client.attach_role_policy(RoleName=self.job_role_name, PolicyArn=self._create_glue_policy())
 
         return role_arn
 
     def _create_s3_policy(self):
-        bucket_arns = [
-            f"arn:aws:s3:::{name}" for name in [self.code_bucket, self.log_bucket]
-        ]
+        bucket_arns = [f"arn:aws:s3:::{name}" for name in [self.code_bucket, self.log_bucket]]
         policy_doc = {
             "Version": "2012-10-17",
             "Statement": [
@@ -290,9 +280,7 @@ class Bootstrap:
                             {"InstanceType": "r5a.2xlarge"},
                         ],
                         "LaunchSpecifications": {
-                            "OnDemandSpecification": {
-                                "AllocationStrategy": "lowest-price"
-                            },
+                            "OnDemandSpecification": {"AllocationStrategy": "lowest-price"},
                             "SpotSpecification": {
                                 "TimeoutDurationMinutes": 10,
                                 "TimeoutAction": "SWITCH_TO_ON_DEMAND",
@@ -313,7 +301,7 @@ class EMREC2:
         self,
         cluster_id: str,
         deployment_package: DeploymentPackage,
-        job_role: str = None,
+        job_role: Optional[str] = None,
         region: str = "",
     ) -> None:
         self.cluster_id = cluster_id
@@ -326,6 +314,7 @@ class EMREC2:
         self,
         job_name: str,
         job_args: Optional[List[str]] = None,
+        spark_submit_opts: Optional[str] = None,
         wait: bool = True,
         show_logs: bool = False,
     ):
@@ -338,14 +327,18 @@ class EMREC2:
         deploy_mode = "client" if show_logs else "cluster"
         spark_submit_params = self.dp.spark_submit_parameters().params_for("emr_ec2")
 
+        if spark_submit_opts:
+            spark_submit_params = f"{spark_submit_params} {spark_submit_opts}".strip()
+        
+        # Escape job args if they're provided
+        if job_args:
+            job_args = [shlex.quote(arg) for arg in job_args]
+
         # show_logs is only compatible with client mode
         # --conf spark.archives is only compatible with cluster mode
         # So if we have both, we have to throw an error
         # See https://issues.apache.org/jira/browse/SPARK-36088
-        if show_logs and (
-            "--conf spark.archives" in spark_submit_params
-            or "--archives" in spark_submit_params
-        ):
+        if show_logs and ("--conf spark.archives" in spark_submit_params or "--archives" in spark_submit_params):
             raise RuntimeError(
                 "--show-stdout is not compatible with projects that make use of "
                 + "dependencies.\nPlease 👍 this GitHub issue to voice your support: "
@@ -367,7 +360,8 @@ class EMREC2:
                             deploy_mode,
                         ]
                         + spark_submit_params.split(" ")
-                        + [self.dp.entrypoint_uri()],
+                        + [self.dp.entrypoint_uri()]
+                        + (job_args or []),
                     },
                 }
             ],
@@ -447,7 +441,7 @@ class EMREC2:
             Key=key,
             WaiterConfig={
                 "Delay": LOG_WAITER_DELAY_SEC,
-                "MaxAttempts": timeout_secs / LOG_WAITER_DELAY_SEC,
+                "MaxAttempts": int(timeout_secs / LOG_WAITER_DELAY_SEC),
             },
         )
         return object_name

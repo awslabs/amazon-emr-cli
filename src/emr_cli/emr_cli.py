@@ -293,7 +293,7 @@ def run(
         if job_args:
             job_args = job_args.split(",")
         emr = EMREC2(cluster_id, p, job_role)
-        emr.run_job(job_name, job_args, wait, show_stdout)
+        emr.run_job(job_name, job_args, spark_submit_opts, wait, show_stdout)
 
 
 cli.add_command(package)
