@@ -8,15 +8,12 @@ from time import sleep
 from typing import List, Optional
 
 import boto3
-
 from emr_cli.deployments import SparkParams
 from emr_cli.utils import console_log, find_files, mkdir, print_s3_gz
 
 
 class DeploymentPackage(metaclass=abc.ABCMeta):
-    def __init__(
-        self, entry_point_path: str = "entrypoint.py", s3_target_uri: str = ""
-    ) -> None:
+    def __init__(self, entry_point_path: str = "entrypoint.py", s3_target_uri: str = "") -> None:
         self.entry_point_path = entry_point_path
         self.dist_dir = "dist"
 
@@ -92,11 +89,32 @@ class Bootstrap:
         Creates both the source and log buckets if they don't already exist.
         """
         for bucket_name in set([self.code_bucket, self.log_bucket]):
-            self.s3_client.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={
-                'LocationConstraint': self.s3_client.meta.region_name # type: ignore
-            })
-            
+            self.s3_client.create_bucket(
+                Bucket=bucket_name,
+                CreateBucketConfiguration={
+                    "LocationConstraint": self.s3_client.meta.region_name  # type: ignore
+                },
+            )
+
             console_log(f"Created S3 bucket: s3://{bucket_name}")
+            self.s3_client.put_bucket_policy(Bucket=bucket_name, Policy=self._default_s3_bucket_policy(bucket_name))
+
+    def _default_s3_bucket_policy(self, bucket_name) -> str:
+        bucket_policy = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "RequireSecureTransport",
+                    "Effect": "Deny",
+                    "Principal": "*",
+                    "Resource": [f"arn:aws:s3:::{bucket_name}/*", f"arn:aws:s3:::{bucket_name}"],
+                    "Condition": {
+                        "Bool": {"aws:SecureTransport": "false", "aws:SourceArn": f"arn:aws:s3:::{bucket_name} "}
+                    },
+                }
+            ],
+        }
+        return json.dumps(bucket_policy)
 
     def _create_job_role(self):
         # First create a role that can be assumed by EMR Serverless jobs
@@ -118,19 +136,13 @@ class Bootstrap:
         role_arn = response.get("Role").get("Arn")
         console_log(f"Created IAM Role: {role_arn}")
 
-        self.iam_client.attach_role_policy(
-            RoleName=self.job_role_name, PolicyArn=self._create_s3_policy()
-        )
-        self.iam_client.attach_role_policy(
-            RoleName=self.job_role_name, PolicyArn=self._create_glue_policy()
-        )
+        self.iam_client.attach_role_policy(RoleName=self.job_role_name, PolicyArn=self._create_s3_policy())
+        self.iam_client.attach_role_policy(RoleName=self.job_role_name, PolicyArn=self._create_glue_policy())
 
         return role_arn
 
     def _create_s3_policy(self):
-        bucket_arns = [
-            f"arn:aws:s3:::{name}" for name in [self.code_bucket, self.log_bucket]
-        ]
+        bucket_arns = [f"arn:aws:s3:::{name}" for name in [self.code_bucket, self.log_bucket]]
         policy_doc = {
             "Version": "2012-10-17",
             "Statement": [
@@ -239,14 +251,10 @@ class EMRServerless:
                 "entryPoint": self.dp.entrypoint_uri(),
             }
         }
-        spark_submit_parameters = self.dp.spark_submit_parameters().params_for(
-            "emr_serverless"
-        )
+        spark_submit_parameters = self.dp.spark_submit_parameters().params_for("emr_serverless")
 
         if spark_submit_opts:
-            spark_submit_parameters = (
-                f"{spark_submit_parameters} {spark_submit_opts}".strip()
-            )
+            spark_submit_parameters = f"{spark_submit_parameters} {spark_submit_opts}".strip()
 
         if spark_submit_parameters:
             jobDriver["sparkSubmit"]["sparkSubmitParameters"] = spark_submit_parameters
@@ -256,11 +264,7 @@ class EMRServerless:
 
         config_overrides = {}
         if s3_logs_uri:
-            config_overrides = {
-                "monitoringConfiguration": {
-                    "s3MonitoringConfiguration": {"logUri": s3_logs_uri}
-                }
-            }
+            config_overrides = {"monitoringConfiguration": {"s3MonitoringConfiguration": {"logUri": s3_logs_uri}}}
 
         response = self.client.start_job_run(
             applicationId=self.application_id,
@@ -314,7 +318,5 @@ class EMRServerless:
         return job_run_id
 
     def get_job_run(self, job_run_id: str) -> dict:
-        response = self.client.get_job_run(
-            applicationId=self.application_id, jobRunId=job_run_id
-        )
+        response = self.client.get_job_run(applicationId=self.application_id, jobRunId=job_run_id)
         return response.get("jobRun")
