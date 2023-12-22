@@ -6,10 +6,10 @@ except ModuleNotFoundError:
     from importlib_metadata import version
 
 import click
-
 from emr_cli.config import DEFAULT_CONFIG_PATH, ConfigReader, ConfigWriter
 from emr_cli.deployments.emr_ec2 import EMREC2
 from emr_cli.deployments.emr_ec2 import Bootstrap as BootstrapEMRonEC2
+from emr_cli.deployments.emr_eks import EMREKS
 from emr_cli.packaging.detector import ProjectDetector
 from emr_cli.utils import console_log
 
@@ -47,9 +47,7 @@ def status(project):
     type=click.Choice(["emr-serverless", "emr-ec2"]),
     help="Bootstrap a brand new environment.",
 )
-@click.option(
-    "--code-bucket", help="Bucket where source code will be uploaded", required=True
-)
+@click.option("--code-bucket", help="Bucket where source code will be uploaded", required=True)
 @click.option("--logs-bucket", help="Bucket where logs will be uploaded")
 @click.option(
     "--instance-profile-name",
@@ -72,9 +70,7 @@ and access to read and create tables in the Glue Data Catalog.""",
     is_flag=True,
     help="Prints the commands necessary to destroy the created environment.",
 )
-def bootstrap(
-    target, code_bucket, logs_bucket, instance_profile_name, job_role_name, destroy
-):
+def bootstrap(target, code_bucket, logs_bucket, instance_profile_name, job_role_name, destroy):
     """
     Bootstrap an EMR Serverless environment.
 
@@ -83,16 +79,12 @@ def bootstrap(
     """
     # EMR on EC2 additionally needs an instance profile role
     if target == "emr-ec2" and instance_profile_name is None:
-        raise click.BadArgumentUsage(
-            "EMR on EC2 clusters require --instance-profile-name to be set."
-        )
+        raise click.BadArgumentUsage("EMR on EC2 clusters require --instance-profile-name to be set.")
 
     if target == "emr-serverless":
         b = BootstrapEMRServerless(code_bucket, logs_bucket, job_role_name)
     else:
-        b = BootstrapEMRonEC2(
-            code_bucket, logs_bucket, instance_profile_name, job_role_name
-        )
+        b = BootstrapEMRonEC2(code_bucket, logs_bucket, instance_profile_name, job_role_name)
 
     resource_id = "application_id" if target == "emr-serverless" else "cluster_id"
     if destroy:
@@ -180,6 +172,7 @@ def deploy(project, entry_point, s3_code_uri):
 @click.command()
 @click.option("--application-id", help="EMR Serverless Application ID")
 @click.option("--cluster-id", help="EMR on EC2 Cluster ID")
+@click.option("--virtual-cluster-id", help="EMR on EKS Virtual Cluster ID")
 @click.option(
     "--entry-point",
     type=click.Path(exists=True, dir_okay=False, allow_dash=False),
@@ -224,6 +217,7 @@ def run(
     project,
     application_id,
     cluster_id,
+    virtual_cluster_id,
     entry_point,
     job_role,
     wait,
@@ -240,22 +234,20 @@ def run(
     Run a project on EMR, optionally build and deploy
     """
     # Either a cluster or application ID must be specified
-    if cluster_id is None and application_id is None:
+    if cluster_id is None and application_id is None and virtual_cluster_id is None:
         raise click.BadArgumentUsage(
-            "Either --application-id or --cluster-id must be specified."
+            "One of --application-id, --cluster-id, or --virtual-cluster-id must be specified."
         )
 
     # But not both :)
-    if cluster_id is not None and application_id is not None:
-        raise click.BadArgumentUsage(
-            "Only one of --application-id or --cluster-id can be specified"
-        )
+    # if cluster_id is not None and application_id is not None:
+    #     raise click.BadArgumentUsage(
+    #         "Only one of --application-id or --cluster-id can be specified"
+    #     )
 
     # We require entry-point and s3-code-uri
     if entry_point is None or s3_code_uri is None:
-        raise click.BadArgumentUsage(
-            "--entry-point and --s3-code-uri are required if --build is used."
-        )
+        raise click.BadArgumentUsage("--entry-point and --s3-code-uri are required if --build is used.")
     p = project(entry_point, s3_code_uri)
 
     # Save the config if the user wants
@@ -265,28 +257,25 @@ def run(
         run_config = {"run": ctx.__dict__.get("params")}
         del run_config["run"]["save_config"]
         ConfigWriter.write(run_config)
-        console_log(
-            f"Config file saved to {DEFAULT_CONFIG_PATH}. Use `emr run` to re-use your configuration."
-        )  # noqa: E501
+        console_log(f"Config file saved to {DEFAULT_CONFIG_PATH}. Use `emr run` to re-use your configuration.")  # noqa: E501
 
     if build:
         p.build()
         p.deploy(s3_code_uri)
 
-    # application_id indicates EMR Serverless job
-    if application_id is not None:
+    if application_id is not None or virtual_cluster_id is not None:
         # We require entry-point and job-role
         if entry_point is None or job_role is None:
             raise click.BadArgumentUsage(
-                "--entry-point and --job-role are required if --application-id is used."
+                "--entry-point and --job-role are required if --application-id or --virtual-cluster-id is used."
             )
 
+    # application_id indicates EMR Serverless job
+    if application_id is not None:
         if job_args:
             job_args = job_args.split(",")
         emrs = EMRServerless(application_id, job_role, p)
-        emrs.run_job(
-            job_name, job_args, spark_submit_opts, wait, show_stdout, s3_logs_uri
-        )
+        emrs.run_job(job_name, job_args, spark_submit_opts, wait, show_stdout, s3_logs_uri)
 
     # cluster_id indicates EMR on EC2 job
     if cluster_id is not None:
@@ -294,6 +283,13 @@ def run(
             job_args = job_args.split(",")
         emr = EMREC2(cluster_id, p, job_role)
         emr.run_job(job_name, job_args, spark_submit_opts, wait, show_stdout)
+
+    # virtual_cluster_id is EMR on EKS
+    if virtual_cluster_id is not None:
+        if job_args:
+            job_args = job_args.split(",")
+        emreks = EMREKS(virtual_cluster_id, job_role, p)
+        emreks.run_job(job_name, job_args, spark_submit_opts, wait, show_stdout, s3_logs_uri)
 
 
 cli.add_command(package)
