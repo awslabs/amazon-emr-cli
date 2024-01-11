@@ -111,4 +111,7 @@ class PythonProject(DeploymentPackage):
                 "spark.executorEnv.PYSPARK_PYTHON": "./environment/bin/python",
                 "spark.yarn.appMasterEnv.PYSPARK_PYTHON": "./environment/bin/python",
             },
+            emr_eks_params={
+                "spark.pyspark.python": "./environment/bin/python",
+            },
         )

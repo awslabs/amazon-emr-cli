@@ -111,7 +111,7 @@ class EMREKS:
             print_s3_gz(self.s3_client, log_location)
 
         if jr_response.get("state") != "COMPLETED":
-            console_log(f"EMR Serverless job failed: {jr_response.get('stateDetails')}")
+            console_log(f"EMR Containers job failed: {jr_response.get('stateDetails')}")
             sys.exit(1)
         console_log("Job completed successfully!")
 
