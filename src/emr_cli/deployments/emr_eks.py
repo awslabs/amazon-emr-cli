@@ -1,6 +1,7 @@
 import re
 import sys
 from os.path import join
+from platform import release
 from time import sleep
 from typing import List, Optional
 
@@ -19,10 +20,21 @@ class EMREKS:
         self.s3_client = boto3.client("s3")
         if region:
             self.client = boto3.client("emr-containers", region_name=region)
+            self.emr_client = boto3.client("emr", region_name=region)
         else:
             # Note that boto3 uses AWS_DEFAULT_REGION, not AWS_REGION
             # We may want to add an extra check here for the latter.
             self.client = boto3.client("emr-containers")
+            self.emr_client = boto3.client("emr")
+
+    def fetch_latest_release_label(self):
+        response = self.emr_client.list_release_labels(
+            Filters={"Application": "Spark", "Prefix": "emr-6"}, MaxResults=1
+        )
+        if len(response["ReleaseLabels"]) == 0:
+            console_log("Error: No release labels found")
+            sys.exit(1)
+        return response["ReleaseLabels"][0]
 
     def run_job(
         self,
@@ -32,9 +44,15 @@ class EMREKS:
         wait: bool = True,
         show_logs: bool = False,
         s3_logs_uri: Optional[str] = None,
+        release_label: Optional[str] = None,
     ):
         if show_logs and not s3_logs_uri:
             raise RuntimeError("--show-stdout requires --s3-logs-uri to be set.")
+
+        if release_label is None:
+            release_label = self.fetch_latest_release_label()
+            console_log(f"Using latest release label {release_label}")
+        release_label = f"{release_label}-latest"
 
         # If job_name is the default, just replace the space.
         # Otherwise throw an error
@@ -70,7 +88,7 @@ class EMREKS:
             name=job_name,
             jobDriver=jobDriver,
             configurationOverrides=config_overrides,
-            releaseLabel="emr-6.15.0-latest",
+            releaseLabel=release_label,
         )
         job_run_id = response.get("id")
 

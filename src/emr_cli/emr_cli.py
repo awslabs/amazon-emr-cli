@@ -210,6 +210,9 @@ def deploy(project, entry_point, s3_code_uri):
     help="Update the config file with the provided options",
     is_flag=True,
 )
+@click.option(
+    "--emr-eks-release-label", help="EMR on EKS release label (emr-6.15.0) - defaults to latest release", default=None
+)
 @click.pass_obj
 @click.pass_context
 def run(
@@ -229,6 +232,7 @@ def run(
     build,
     show_stdout,
     save_config,
+    emr_eks_release_label,
 ):
     """
     Run a project on EMR, optionally build and deploy
@@ -242,7 +246,7 @@ def run(
         )
 
     # Only one resource ID can be specified
-    if resource_ids.count(None) != (len(resource_ids)-1):
+    if resource_ids.count(None) != (len(resource_ids) - 1):
         raise click.BadArgumentUsage(
             "Only one of --application-id, --cluster-id, or --virtual-cluster-id can be specified"
         )
@@ -251,6 +255,13 @@ def run(
     if entry_point is None or s3_code_uri is None:
         raise click.BadArgumentUsage("--entry-point and --s3-code-uri are required.")
     p = project(entry_point, s3_code_uri)
+
+    # Do a brief validation of the EMR on EKS release label
+    if emr_eks_release_label:
+        if not virtual_cluster_id:
+            raise click.BadArgumentUsage("--emr-eks-release-label can only be used with --virtual-cluster-id")
+        elif not emr_eks_release_label.startswith("emr-"):
+            raise click.BadArgumentUsage(f"--emr-eks-release-label must start with 'emr-', provided '{emr_eks_release_label}'")
 
     # If the user passes --save-config, update our stored config file
     if save_config:
@@ -289,7 +300,7 @@ def run(
         if job_args:
             job_args = job_args.split(",")
         emreks = EMREKS(virtual_cluster_id, job_role, p)
-        emreks.run_job(job_name, job_args, spark_submit_opts, wait, show_stdout, s3_logs_uri)
+        emreks.run_job(job_name, job_args, spark_submit_opts, wait, show_stdout, s3_logs_uri, emr_eks_release_label)
 
 
 cli.add_command(package)
