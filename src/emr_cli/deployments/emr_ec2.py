@@ -91,6 +91,24 @@ class Bootstrap:
                 CreateBucketConfiguration={"LocationConstraint": self.s3_client.meta.region_name},
             )
             console_log(f"Created S3 bucket: s3://{bucket_name}")
+            self.s3_client.put_bucket_policy(Bucket=bucket_name, Policy=self._default_s3_bucket_policy(bucket_name))
+
+    def _default_s3_bucket_policy(self, bucket_name) -> str:
+        bucket_policy = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "RequireSecureTransport",
+                    "Effect": "Deny",
+                    "Principal": "*",
+                    "Resource": [f"arn:aws:s3:::{bucket_name}/*", f"arn:aws:s3:::{bucket_name}"],
+                    "Condition": {
+                        "Bool": {"aws:SecureTransport": "false", "aws:SourceArn": f"arn:aws:s3:::{bucket_name} "}
+                    },
+                }
+            ],
+        }
+        return json.dumps(bucket_policy)
 
     def _create_service_role(self):
         """
@@ -329,7 +347,7 @@ class EMREC2:
 
         if spark_submit_opts:
             spark_submit_params = f"{spark_submit_params} {spark_submit_opts}".strip()
-        
+
         # Escape job args if they're provided
         if job_args:
             job_args = [shlex.quote(arg) for arg in job_args]
