@@ -233,24 +233,24 @@ def run(
     """
     Run a project on EMR, optionally build and deploy
     """
-    # Either a cluster or application ID must be specified
-    if cluster_id is None and application_id is None and virtual_cluster_id is None:
+    resource_ids = [cluster_id, application_id, virtual_cluster_id]
+
+    # A resource ID must be specified
+    if not any(resource_ids):
         raise click.BadArgumentUsage(
             "One of --application-id, --cluster-id, or --virtual-cluster-id must be specified."
         )
 
-    # But not both :)
-    # if cluster_id is not None and application_id is not None:
-    #     raise click.BadArgumentUsage(
-    #         "Only one of --application-id or --cluster-id can be specified"
-    #     )
+    # Only one resource ID can be specified
+    if resource_ids.count(None) != (len(resource_ids)-1):
+        raise click.BadArgumentUsage(
+            "Only one of --application-id, --cluster-id, or --virtual-cluster-id can be specified"
+        )
 
     # We require entry-point and s3-code-uri
     if entry_point is None or s3_code_uri is None:
-        raise click.BadArgumentUsage("--entry-point and --s3-code-uri are required if --build is used.")
+        raise click.BadArgumentUsage("--entry-point and --s3-code-uri are required.")
     p = project(entry_point, s3_code_uri)
-
-    # Save the config if the user wants
 
     # If the user passes --save-config, update our stored config file
     if save_config:
@@ -263,7 +263,7 @@ def run(
         p.build()
         p.deploy(s3_code_uri)
 
-    if application_id is not None or virtual_cluster_id is not None:
+    if any([application_id, virtual_cluster_id]):
         # We require entry-point and job-role
         if entry_point is None or job_role is None:
             raise click.BadArgumentUsage(
