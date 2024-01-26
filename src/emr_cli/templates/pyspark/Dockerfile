@@ -28,6 +28,8 @@ ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
+# EMR 6.x uses Python 3.7 - limit Poetry version to 1.5.1
+ENV POETRY_VERSION=1.5.1
 RUN python3 -m pip install --upgrade pip
 RUN curl -sSL https://install.python-poetry.org | python3 -
 
