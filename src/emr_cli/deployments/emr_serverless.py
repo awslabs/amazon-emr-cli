@@ -49,6 +49,7 @@ class DeploymentPackage(metaclass=abc.ABCMeta):
 
 
 class Bootstrap:
+    # Maybe add some UUIDs to these?
     DEFAULT_S3_POLICY_NAME = "emr-cli-S3Access"
     DEFAULT_GLUE_POLICY_NAME = "emr-cli-GlueAccess"
 
@@ -74,7 +75,8 @@ class Bootstrap:
     def print_destroy_commands(self, application_id: str):
         # fmt: off
         for bucket in set([self.log_bucket, self.code_bucket]):
-            print(f"# aws s3 rm s3://{bucket} --force")
+            print(f"aws s3 rm s3://{bucket} --recursive")
+            print(f"aws s3api delete-bucket --bucket {bucket}")
         for policy in self.iam_client.list_attached_role_policies(RoleName=self.job_role_name).get('AttachedPolicies'):  # noqa E501
             arn = policy.get('PolicyArn')
             print(f"aws iam detach-role-policy --role-name {self.job_role_name} --policy-arn {arn}")  # noqa E501
@@ -107,6 +109,7 @@ class Bootstrap:
                     "Sid": "RequireSecureTransport",
                     "Effect": "Deny",
                     "Principal": "*",
+                    "Action": "s3:*",
                     "Resource": [f"arn:aws:s3:::{bucket_name}/*", f"arn:aws:s3:::{bucket_name}"],
                     "Condition": {
                         "Bool": {"aws:SecureTransport": "false", "aws:SourceArn": f"arn:aws:s3:::{bucket_name} "}

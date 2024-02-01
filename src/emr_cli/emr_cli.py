@@ -101,6 +101,7 @@ def bootstrap(target, code_bucket, logs_bucket, instance_profile_name, job_role_
             resource_id: config.get(resource_id),
             "job_role": config.get("job_role_arn"),
             "s3_code_uri": f"s3://{config.get('code_bucket')}/code/pyspark/",
+            "s3_logs_uri": f"s3://{config.get('log_bucket')}/logs/pyspark/",
         }
     }
     ConfigWriter.write(run_config)

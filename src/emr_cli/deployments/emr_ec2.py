@@ -101,6 +101,7 @@ class Bootstrap:
                     "Sid": "RequireSecureTransport",
                     "Effect": "Deny",
                     "Principal": "*",
+                    "Action": "s3:*",
                     "Resource": [f"arn:aws:s3:::{bucket_name}/*", f"arn:aws:s3:::{bucket_name}"],
                     "Condition": {
                         "Bool": {"aws:SecureTransport": "false", "aws:SourceArn": f"arn:aws:s3:::{bucket_name} "}
