@@ -239,8 +239,6 @@ emr run --entry-point main.py \
 - Run the same job against an EMR on EC2 cluster
 
 ```bash
-
-```bash
 emr run --entry-point main.py \
     --s3-code-uri s3://<BUCKET>/code/ \
     --s3-logs-uri s3://<BUCKET>/logs/ \

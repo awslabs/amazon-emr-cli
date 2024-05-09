@@ -245,6 +245,7 @@ class EMRServerless:
         wait: bool = True,
         show_logs: bool = False,
         s3_logs_uri: Optional[str] = None,
+        timeout: Optional[int] = None,
     ):
         if show_logs and not s3_logs_uri:
             raise RuntimeError("--show-stdout requires --s3-logs-uri to be set.")
@@ -269,12 +270,16 @@ class EMRServerless:
         if s3_logs_uri:
             config_overrides = {"monitoringConfiguration": {"s3MonitoringConfiguration": {"logUri": s3_logs_uri}}}
 
+        if timeout is None:
+            timeout = 12 * 60  # set to AWS default value (12 hours in minutes)
+
         response = self.client.start_job_run(
             applicationId=self.application_id,
             executionRoleArn=self.job_role,
             name=job_name,
             jobDriver=jobDriver,
             configurationOverrides=config_overrides,
+            executionTimeoutMinutes=timeout,
         )
         job_run_id = response.get("jobRunId")
 

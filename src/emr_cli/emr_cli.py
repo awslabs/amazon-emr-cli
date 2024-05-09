@@ -214,6 +214,12 @@ def deploy(project, entry_point, s3_code_uri):
 @click.option(
     "--emr-eks-release-label", help="EMR on EKS release label (emr-6.15.0) - defaults to latest release", default=None
 )
+@click.option(
+    "--emr-serverless-timeout",
+    help="EMR Serverless job timeout in minutes - defaults to 12 hours",
+    default=None,
+    type=int
+)
 @click.pass_obj
 @click.pass_context
 def run(
@@ -234,6 +240,7 @@ def run(
     show_stdout,
     save_config,
     emr_eks_release_label,
+    emr_serverless_timeout,
 ):
     """
     Run a project on EMR, optionally build and deploy
@@ -282,12 +289,15 @@ def run(
                 "--entry-point and --job-role are required if --application-id or --virtual-cluster-id is used."
             )
 
+    if emr_serverless_timeout < 0:
+        raise click.BadArgumentUsage("--emr-serverless-timeout must be greater than or equal to 0.")
+
     # application_id indicates EMR Serverless job
     if application_id is not None:
         if job_args:
             job_args = job_args.split(",")
         emrs = EMRServerless(application_id, job_role, p)
-        emrs.run_job(job_name, job_args, spark_submit_opts, wait, show_stdout, s3_logs_uri)
+        emrs.run_job(job_name, job_args, spark_submit_opts, wait, show_stdout, s3_logs_uri, emr_serverless_timeout)
 
     # cluster_id indicates EMR on EC2 job
     if cluster_id is not None:
