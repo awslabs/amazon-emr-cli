@@ -9,28 +9,35 @@ import boto3
 from botocore.exceptions import ClientError, WaiterError
 from emr_cli.deployments.emr_serverless import DeploymentPackage
 from emr_cli.utils import console_log, parse_bucket_uri, print_s3_gz
+from emr_cli.base.EmrBase import EMRBase
 
 LOG_WAITER_DELAY_SEC = 30
 
 
-class Bootstrap:
+class Bootstrap(EMRBase):
     DEFAULT_S3_POLICY_NAME = "emr-cli-S3Access"
     DEFAULT_GLUE_POLICY_NAME = "emr-cli-GlueAccess"
 
+    aws_session = ""
+
     def __init__(
         self,
+        profile: str,
         code_bucket: str,
         log_bucket: str,
         instance_role_name: str,
         job_role_name: str,
     ):
+        
+        super.__init__(profile)
+
         self.code_bucket = code_bucket
         self.log_bucket = log_bucket or code_bucket
         self.instance_role_name = instance_role_name
         self.job_role_name = job_role_name
-        self.s3_client = boto3.client("s3")
-        self.iam_client = boto3.client("iam")
-        self.emr_client = boto3.client("emr")
+        self.s3_client = self.aws_session.client("s3")
+        self.iam_client = self.aws_session.client("iam")
+        self.emr_client = self.aws_session.client("emr")
 
     def create_environment(self):
         self._create_s3_buckets()
@@ -88,7 +95,7 @@ class Bootstrap:
         for bucket_name in set([self.code_bucket, self.log_bucket]):
             self.s3_client.create_bucket(
                 Bucket=bucket_name,
-                CreateBucketConfiguration={"LocationConstraint": self.s3_client.meta.region_name},
+                CreateBucketConfiguration={"LocationConstraint": self.aws_session.region_name},
             )
             console_log(f"Created S3 bucket: s3://{bucket_name}")
             self.s3_client.put_bucket_policy(Bucket=bucket_name, Policy=self._default_s3_bucket_policy(bucket_name))
@@ -315,19 +322,22 @@ class Bootstrap:
         return cluster_id
 
 
-class EMREC2:
+class EMREC2(EMRBase):
     def __init__(
         self,
         cluster_id: str,
         deployment_package: DeploymentPackage,
         job_role: Optional[str] = None,
-        region: str = "",
+        profile: str = "",
     ) -> None:
+        
+        super().__init__(profile)
+
         self.cluster_id = cluster_id
         self.dp = deployment_package
         self.job_role = job_role
-        self.client = boto3.client("emr")
-        self.s3_client = boto3.client("s3")
+        self.client = self.aws_session.client("emr")
+        self.s3_client = self.aws_session.client("s3")
 
     def run_job(
         self,

@@ -72,11 +72,19 @@ class PythonPoetryProject(DeploymentPackage):
         )
         return os.path.join(templates, "Dockerfile")
 
-    def deploy(self, s3_code_uri: str) -> str:
+    def deploy(self, s3_code_uri: str, profile: str=None) -> str:
         """
         Copies local code to S3 and returns the path to the uploaded entrypoint
         """
-        s3_client = boto3.client("s3")
+        aws_session = ""
+
+        if profile:
+            aws_session = boto3.session.Session(profile_name=profile)
+        else:
+            aws_session = boto3.session.Session()
+
+        s3_client = aws_session.client("s3")
+        
         bucket, prefix = self._parse_bucket_uri(s3_code_uri)
         filename = os.path.basename(self.entry_point_path)
 
