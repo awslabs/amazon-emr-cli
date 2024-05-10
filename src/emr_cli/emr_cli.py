@@ -70,7 +70,11 @@ and access to read and create tables in the Glue Data Catalog.""",
     is_flag=True,
     help="Prints the commands necessary to destroy the created environment.",
 )
-def bootstrap(target, code_bucket, logs_bucket, instance_profile_name, job_role_name, destroy):
+@click.option(
+    "--profile",
+    help="The AWS profile to use for bootstraping the environment.",
+)
+def bootstrap(target, code_bucket, logs_bucket, instance_profile_name, job_role_name, destroy, profile):
     """
     Bootstrap an EMR Serverless environment.
 
@@ -82,9 +86,9 @@ def bootstrap(target, code_bucket, logs_bucket, instance_profile_name, job_role_
         raise click.BadArgumentUsage("EMR on EC2 clusters require --instance-profile-name to be set.")
 
     if target == "emr-serverless":
-        b = BootstrapEMRServerless(code_bucket, logs_bucket, job_role_name)
+        b = BootstrapEMRServerless(profile, code_bucket, logs_bucket, job_role_name)
     else:
-        b = BootstrapEMRonEC2(code_bucket, logs_bucket, instance_profile_name, job_role_name)
+        b = BootstrapEMRonEC2(profile, code_bucket, logs_bucket, instance_profile_name, job_role_name)
 
     resource_id = "application_id" if target == "emr-serverless" else "cluster_id"
     if destroy:
@@ -161,13 +165,17 @@ def package(project, entry_point):
     help="Where to copy code artifacts to",
     required=True,
 )
+@click.option(
+    "--profile",
+    help="The AWS profile to use to upload the package to S3 bucket",
+)
 @click.pass_obj
-def deploy(project, entry_point, s3_code_uri):
+def deploy(project, entry_point, s3_code_uri, profile):
     """
     Copy a local project to S3.
     """
     p = project(entry_point)
-    p.deploy(s3_code_uri)
+    p.deploy(s3_code_uri, profile)
 
 
 @click.command()
@@ -220,6 +228,10 @@ def deploy(project, entry_point, s3_code_uri):
     default=720, # set to AWS default value (12 hours in minutes)
     type=int
 )
+@click.option(
+    "--profile",
+    help="The AWS profile to use for starting the job execution",
+)
 @click.pass_obj
 @click.pass_context
 def run(
@@ -241,6 +253,7 @@ def run(
     save_config,
     emr_eks_release_label,
     emr_serverless_timeout,
+    profile
 ):
     """
     Run a project on EMR, optionally build and deploy
@@ -280,7 +293,7 @@ def run(
 
     if build:
         p.build()
-        p.deploy(s3_code_uri)
+        p.deploy(s3_code_uri, profile)
 
     if any([application_id, virtual_cluster_id]):
         # We require entry-point and job-role
@@ -296,21 +309,21 @@ def run(
     if application_id is not None:
         if job_args:
             job_args = job_args.split(",")
-        emrs = EMRServerless(application_id, job_role, p)
+        emrs = EMRServerless(application_id, job_role, p, profile=profile)
         emrs.run_job(job_name, job_args, spark_submit_opts, wait, show_stdout, s3_logs_uri, emr_serverless_timeout)
 
     # cluster_id indicates EMR on EC2 job
     if cluster_id is not None:
         if job_args:
             job_args = job_args.split(",")
-        emr = EMREC2(cluster_id, p, job_role)
+        emr = EMREC2(cluster_id, p, job_role, profile=profile)
         emr.run_job(job_name, job_args, spark_submit_opts, wait, show_stdout)
 
     # virtual_cluster_id is EMR on EKS
     if virtual_cluster_id is not None:
         if job_args:
             job_args = job_args.split(",")
-        emreks = EMREKS(virtual_cluster_id, job_role, p)
+        emreks = EMREKS(virtual_cluster_id, job_role, p, profile=profile)
         emreks.run_job(job_name, job_args, spark_submit_opts, wait, show_stdout, s3_logs_uri, emr_eks_release_label)
 
 
