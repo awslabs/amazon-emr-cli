@@ -270,9 +270,6 @@ class EMRServerless:
         if s3_logs_uri:
             config_overrides = {"monitoringConfiguration": {"s3MonitoringConfiguration": {"logUri": s3_logs_uri}}}
 
-        if timeout is None:
-            timeout = 12 * 60  # set to AWS default value (12 hours in minutes)
-
         response = self.client.start_job_run(
             applicationId=self.application_id,
             executionRoleArn=self.job_role,
