@@ -217,7 +217,7 @@ def deploy(project, entry_point, s3_code_uri):
 @click.option(
     "--emr-serverless-timeout",
     help="EMR Serverless job timeout in minutes - defaults to 12 hours",
-    default=None,
+    default=720, # set to AWS default value (12 hours in minutes)
     type=int
 )
 @click.pass_obj
