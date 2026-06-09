@@ -9,5 +9,5 @@ dependencies = [
 
 [project.optional-dependencies]
 tests = [
-  'pytest==7.1.2',
+  'pytest==9.0.3',
 ]
