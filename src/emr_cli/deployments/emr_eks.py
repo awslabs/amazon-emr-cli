@@ -8,24 +8,22 @@ from typing import List, Optional
 import boto3
 from emr_cli.deployments.emr_serverless import DeploymentPackage
 from emr_cli.utils import console_log, print_s3_gz
+from emr_cli.base.EmrBase import EMRBase
 
-
-class EMREKS:
+class EMREKS(EMRBase):
     def __init__(
-        self, virtual_cluster_id: str, job_role: str, deployment_package: DeploymentPackage, region: str = ""
+        self, virtual_cluster_id: str, job_role: str, deployment_package: DeploymentPackage, profile: str = None
     ) -> None:
+        
+        super().__init__(profile)
+
         self.virtual_cluster_id = virtual_cluster_id
         self.job_role = job_role
         self.dp = deployment_package
         self.s3_client = boto3.client("s3")
-        if region:
-            self.client = boto3.client("emr-containers", region_name=region)
-            self.emr_client = boto3.client("emr", region_name=region)
-        else:
-            # Note that boto3 uses AWS_DEFAULT_REGION, not AWS_REGION
-            # We may want to add an extra check here for the latter.
-            self.client = boto3.client("emr-containers")
-            self.emr_client = boto3.client("emr")
+        
+        self.client = self.aws_session.client("emr-containers")
+        self.emr_client = self.aws_session.client("emr")
 
     def fetch_latest_release_label(self):
         response = self.emr_client.list_release_labels(
